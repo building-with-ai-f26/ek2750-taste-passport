@@ -3,11 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>[Your Product Name] · Building with AI (Fall 2026)</title>
+  <title>Taste Passport · Building with AI (Fall 2026)</title>
 
-  <!-- Week 1: create your PostHog account only.
-       Build 2: paste your project's current PostHog web snippet here,
-       then install analytics in the local app and verify events. -->
+  <!-- Build 2: paste your project's PostHog web snippet here. -->
 
   <style>
     :root {
@@ -23,195 +21,121 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "DM Sans", "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.6;
     }
-    .container {
-      max-width: 820px;
-      margin: 0 auto;
-      padding: 48px 24px 80px;
-    }
-    header {
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 28px;
-      margin-bottom: 32px;
-    }
+    .container { max-width: 760px; margin: 0 auto; padding: 48px 20px 80px; }
+    header { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; }
     .eyebrow {
-      display: inline-block;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      background: var(--tag-bg);
-      color: var(--tag-text);
-      padding: 4px 10px;
-      border-radius: 999px;
-      margin-bottom: 12px;
+      display: inline-block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      background: var(--tag-bg); color: var(--tag-text);
+      padding: 4px 10px; border-radius: 999px; margin-bottom: 12px;
     }
-    h1 {
-      font-size: 36px;
-      line-height: 1.15;
-      margin: 0 0 12px;
-      letter-spacing: -0.02em;
-    }
-    .tagline {
-      font-size: 19px;
-      color: var(--muted);
-      margin: 0 0 20px;
-    }
-    .cta-row {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .btn {
-      display: inline-block;
-      padding: 10px 18px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 15px;
-      text-decoration: none;
-      background: var(--accent);
-      color: #fff;
-    }
-    .btn-secondary {
-      background: var(--card);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
+    h1 { font-size: 36px; line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.02em; }
+    .tagline { font-size: 20px; color: var(--muted); margin: 0 0 16px; }
+    .meta { font-size: 14px; color: var(--muted); margin: 0; }
+    nav { margin-top: 16px; display: flex; gap: 16px; flex-wrap: wrap; font-size: 15px; }
+    nav a { color: var(--accent); text-decoration: none; font-weight: 600; }
     section {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px 28px;
-      margin-bottom: 24px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px 28px; margin-bottom: 24px;
     }
-    h2 {
-      font-size: 20px;
-      margin: 0 0 14px;
-      letter-spacing: -0.01em;
+    h2 { font-size: 22px; margin: 0 0 14px; letter-spacing: -0.01em; }
+    h3 { font-size: 17px; margin: 24px 0 8px; }
+    h4 { font-size: 15px; margin: 16px 0 6px; }
+    p, ul, ol { margin: 0 0 12px; color: #1f2937; }
+    li { margin-bottom: 4px; }
+    .screenshot-placeholder {
+      border: 2px dashed var(--border); border-radius: 8px;
+      padding: 48px 16px; text-align: center; color: var(--muted); background: var(--bg);
     }
-    h3 {
-      font-size: 16px;
-      margin: 18px 0 6px;
-    }
-    p, ul {
-      margin: 0 0 12px;
-      color: #1f2937;
-    }
-    .grid-2 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 16px;
-    }
-    .stat-box {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 16px;
-      background: var(--bg);
-    }
-    .stat-label {
-      font-size: 12px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .stat-value {
-      font-size: 20px;
-      font-weight: 700;
-      margin-top: 4px;
-    }
-    .log-entry {
-      border-top: 1px solid var(--border);
-      padding-top: 16px;
-      margin-top: 16px;
-    }
-    .log-entry:first-of-type {
-      border-top: none;
-      padding-top: 0;
-      margin-top: 0;
-    }
-    .meta {
-      font-size: 13px;
-      color: var(--muted);
-    }
+    .log-entry { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
+    .log-entry:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+    .log-entry h3 { margin-top: 0; }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- HERO / PRODUCT PITCH -->
     <header>
       <span class="eyebrow">NYU Stern · Building with AI · Fall 2026</span>
-      <h1>[Your Product Name]</h1>
-      <p class="tagline">[One clear sentence: Who is this for, and what painful job does it do for them?]</p>
-      <div class="cta-row">
-        <a class="btn" href="#live-demo" onclick="window.posthog && posthog.capture('clicked_try_product')">See the Product →</a>
-        <a class="btn btn-secondary" href="#prd">Read the Living PRD</a>
-        <a class="btn btn-secondary" href="#build-log">Weekly Build Log</a>
-      </div>
+      <h1>Taste Passport</h1>
+      <p class="tagline">Same taste, new city.</p>
+      <p class="meta">Esra Karamanci (ek2750) · PRD v1, November 8, 2026</p>
+      <nav>
+        <a href="#prd">PRD</a>
+        <a href="#prototype">Prototype</a>
+        <a href="#build-log">Build Log</a>
+      </nav>
     </header>
 
-    <!-- DEMO / SCREENSHOT / VIDEO SHOWCASE -->
-    <section id="live-demo">
-      <h2>Product Showcase (Prototype / Live App / 2-Min Video)</h2>
-      <p>
-        <strong>Current Status:</strong> [Build 1: local prototype / Builds 2–4: local app / Build 5: cloud app]<br />
-        <strong>Demo:</strong> [Add a screenshot or GIF now; add the live cloud app URL in Build 5.]
-      </p>
-      <p class="meta">
-        Ask your coding agent to embed a screenshot or GIF of your local prototype for Build 1. Keep this evidence current, then add your cloud app link and two-minute video in Build 5.
-      </p>
-    </section>
-
-    <!-- LIVING PRD (Updated every week!) -->
+    <!-- PRD -->
     <section id="prd">
-      <h2>Living PRD (Product Requirements Document)</h2>
-      <p class="meta">Updated every week as we test with real users and learn what works.</p>
+      <h2>Product Requirements Document</h2>
+      <p>Taste Passport turns the places you love at home into a travel profile. It learns what you love and dislike about each place and uses that to recommend where to stay, eat, drink, shop and explore in a new city. Traveling with others? Friends can add their own taste through a link, and the guide adapts to everyone on the trip.</p>
 
-      <h3>1. Target User & The Job to Be Done</h3>
-      <p><strong>Who is this for?</strong> [Name a specific, reachable person or role you have direct access to.]</p>
-      <p><strong>The painful "Before" workflow:</strong> [How do they do this today, and why is it slow, manual, or broken?]</p>
-      <p><strong>The "After" workflow with this product:</strong> [What does your tool do for them in one sitting?]</p>
+      <h3>1. Problem</h3>
+      <p>Planning where to eat, drink and stay in a new city takes hours and still feels like guesswork. Recommendations are scattered across Google, TikTok, Instagram, blogs and friends' texts, and almost all of them are generic. They tell you what's popular, not what you would like.</p>
+      <p>Most people already know their taste well. They have go-to spots at home and could explain what they love about each one. But nothing carries that knowledge to a new city, so every trip starts from zero. On top of that, traveling with others makes it harder. Everyone has different tastes, budgets and dealbreakers, and the planning usually falls on one person in a long group chat.</p>
 
-      <h3>2. Scope & Explicit Non-Goals</h3>
+      <h3>2. Reachable user</h3>
+      <p>My primary user is me, an NYC-based MBA student who travels often and has strong opinions about where I eat, drink and stay.</p>
+      <p>I'll test with a group of 5 to 10 people I can easily reach throughout my build, including Stern MBA classmates and college friends. The group spans different age ranges and travel styles, so I can see whether the taste matching works beyond people like me.</p>
+
+      <h3>3. Before and after</h3>
+      <h4>Before (today)</h4>
+      <ol>
+        <li>Google "best restaurants in Tokyo," then scroll TikTok and Instagram.</li>
+        <li>Text friends who've been, and wait for answers.</li>
+        <li>Read reviews and guess which places match my taste.</li>
+        <li>Pick a hotel neighborhood based on a blog post.</li>
+        <li>If friends are coming, go back and forth in a group chat until someone gives in.</li>
+      </ol>
+      <p>It takes hours, the results are generic, and at least one meal usually ends up at a tourist trap or an overhyped spot.</p>
+
+      <h4>After (with Taste Passport)</h4>
+      <ol>
+        <li>Add at least 5 places I love at home and 2 I don't, with a short note on each. The more places I add, the better it gets to know my taste, and my profile is saved for future trips.</li>
+        <li>Review what the app thinks I love or dislike about each place (e.g. "lively but still easy to talk," "too sceney") and correct anything that's off.</li>
+        <li>Tell the app where I'm going and what the trip is for (e.g. a work trip, a romantic weekend, a trip with my parents).</li>
+        <li>If friends are coming, share a link so they can add their own favorites, dislikes and budget.</li>
+        <li>Get a personalized guide to the city, with the best neighborhood to stay in and where to eat, drink, shop and explore, balanced across everyone on the trip. Anyone on the trip can remove a pick or add their own.</li>
+      </ol>
+      <p>It takes minutes, and every pick feels like it could be one of my own go-to spots.</p>
+
+      <h3>4. Core workflow</h3>
+      <ol>
+        <li><strong>Add favorites and dislikes.</strong> Enter at least 5 places I love in my home city and at least 2 I don't, with a short note on each. There's no upper limit, adding more improves the results, and my profile is saved for future trips.</li>
+        <li><strong>Review my taste.</strong> The app shows what it thinks I love or dislike about each place (e.g. "counter seating," "special without being expensive," "too loud"), and I can edit or remove anything that's off.</li>
+        <li><strong>Describe the trip.</strong> Enter the destination and what the trip is for, so the picks fit the occasion (e.g. a romantic weekend, a work trip, a trip with my parents).</li>
+        <li><strong>Invite travel companions (optional).</strong> Share a link so friends can add their own favorites, dislikes and budget, with no account needed.</li>
+        <li><strong>Get the guide.</strong> See the best neighborhood to stay in, plus where to eat, drink, shop and explore. Each pick is checked to make sure it exists and is open, and is tied to something someone on the trip loves. Anyone on the trip can edit the guide by removing a pick, with an optional reason so the app suggests a replacement, or by adding a place of their own.</li>
+      </ol>
+
+      <h3>5. Three non-goals</h3>
       <ul>
-        <li><strong>In Scope (Core Workflow):</strong> [The 1 main workflow this product does reliably]</li>
-        <li><strong>Out of Scope #1:</strong> [Feature you are deliberately NOT building in 6 weeks]</li>
-        <li><strong>Out of Scope #2:</strong> [Feature you are deliberately NOT building in 6 weeks]</li>
-        <li><strong>Out of Scope #3:</strong> [Feature you are deliberately NOT building in 6 weeks]</li>
+        <li><strong>Member accounts.</strong> For now, friends join a trip through a share link and add their own favorites and dislikes. Inviting members with their own accounts would need logins and a user database, which adds a lot of complexity without changing what the product does at this stage.</li>
+        <li><strong>Google Maps import and map view.</strong> Importing saved places and showing picks on a map would make the app easier to use, but neither is needed to test whether the taste matching works.</li>
+        <li><strong>Booking, reservations and itineraries.</strong> Every travel app already competes on logistics. The value here is taste, and picks can link out to book.</li>
       </ul>
 
-      <h3>3. How It Works Under the Hood & Riskiest Assumption (Week 2+)</h3>
-      <p><strong>Riskiest Assumption:</strong> [What is the #1 technical or user risk that could sink this product?]</p>
-      <p><strong>Simple Architecture:</strong> [User Input] → [Your App / Server] → [AI Model / Tool] → [Output]</p>
-
-      <h3>4. Unit Economics & Analytics Snapshot (Updated Weekly)</h3>
-      <div class="grid-2">
-        <div class="stat-box">
-          <div class="stat-label">Cumulative Build Spend</div>
-          <div class="stat-value">[Record actual spend]</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">Est. Cost Per User Run</div>
-          <div class="stat-value">[Not yet estimated]</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">User Evidence (Analytics from Build 2)</div>
-          <div class="stat-value">[Not yet measured]</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">Sponsor Call (Week 6)</div>
-          <div class="stat-value">TBD</div>
-        </div>
-      </div>
+      <h3>6. How I'll know it works</h3>
+      <p>Each tester tries two cities they know well, so they can judge the picks. I'll consider it working if at least 7 out of 10 picks are places they'd actually go.</p>
+      <p>I'll also check whether the app understands why people love their places. Most of the reasons it pulls out should be kept without edits, and testers should feel the explanations sound like them.</p>
+      <p><strong>Riskiest assumption.</strong> A short note about a favorite place gives the app enough to understand why someone loves it, in a way that carries over to a different city. The first version is designed to test exactly that.</p>
     </section>
 
-    <!-- WEEKLY BUILD LOG (Updated at least twice a week via Git commits) -->
+    <!-- PROTOTYPE -->
+    <section id="prototype">
+      <h2>Prototype</h2>
+      <div class="screenshot-placeholder">Prototype screenshot coming soon.</div>
+    </section>
+
+    <!-- BUILD LOG -->
     <section id="build-log">
-      <h2>Weekly Build Log</h2>
-      <p class="meta">Build on at least two separate days each week outside class, including the November 3 break. Push commits and log actual progress, failures, PRD changes, costs, and hours here. All build deadlines are noon, New York time.</p>
+      <h2>Build Log</h2>
 
       <div class="log-entry">
         <h3>November 4, 2026 · Environment Setup</h3>
@@ -219,53 +143,6 @@
           <li><strong>What shipped:</strong> Set up Git, GitHub CLI, Homebrew, Node.js, and Claude Code. Created the repo from the class template and confirmed GitHub Pages is live.</li>
           <li><strong>What broke:</strong> npm install of Claude Code failed with a permissions error, so I used Anthropic's native installer instead. Mac blocked the gh .pkg installer, so I installed gh with Homebrew.</li>
           <li><strong>Cost & time:</strong> $0 (Claude Pro subscription) · about 1 hour</li>
-        </ul>
-      </div>
-
-      <div class="log-entry">
-        <h3>Build 1 · Intent.md & Throwaway Prototype (Due Nov 9)</h3>
-        <ul>
-          <li><strong>What shipped:</strong> [What you actually built; link your local prototype screenshot or GIF above.]</li>
-          <li><strong>Things learned with AI:</strong> [What you learned from AI practice and Terminus Episodes 1 and 2.]</li>
-          <li><strong>What broke / changed in PRD:</strong> [Fill in]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
-        </ul>
-      </div>
-
-      <div class="log-entry">
-        <h3>Build 2 · Smallest Local Version & PostHog (Due Nov 16)</h3>
-        <ul>
-          <li><strong>What shipped:</strong> [Local working slice, PostHog verified on this page and the local app, PRD v2, and local setup in AGENTS.md]</li>
-          <li><strong>What broke / changed in PRD:</strong> [Fill in]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
-        </ul>
-      </div>
-
-      <div class="log-entry">
-        <h3>Build 3 · Build.exe: The Core Workflow (Due Nov 23)</h3>
-        <ul>
-          <li><strong>What shipped:</strong> [End-to-end workflow working with real inputs + PostHog funnel events]</li>
-          <li><strong>What broke / changed in PRD:</strong> [Fill in]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
-        </ul>
-      </div>
-
-      <div class="log-entry">
-        <h3>Build 4 · Test.py: Choose Track A or Track B (Due Nov 30)</h3>
-        <ul>
-          <li><strong>Chosen track:</strong> [A: 10-case domain eval and one outside target-user review; OR B: 3–5 outside users and replay findings]</li>
-          <li><strong>Results and improvements:</strong> [Before/after evidence; for Track B, fixes to the top three friction points]</li>
-          <li><strong>PRD v4 changes:</strong> [What the evidence changed]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
-        </ul>
-      </div>
-
-      <div class="log-entry">
-        <h3>Build 5 · Ship.installer: Launch Ops, Rollback Check & 2-Min Video (Due Dec 7)</h3>
-        <ul>
-          <li><strong>Launch Ops & Safety:</strong> [Verified no exposed keys, set spend cap, tested 2-minute rollback]</li>
-          <li><strong>2-Minute Video & Final Polish:</strong> [Link/embed above]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
         </ul>
       </div>
     </section>
