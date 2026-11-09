@@ -82,6 +82,10 @@
       padding: 64px 16px; text-align: center; color: var(--muted); font-size: 15px;
     }
 
+    figure { margin: 24px 0 0; }
+    figure img { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; }
+    figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; }
+
     /* Cost & analytics boxes */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
@@ -197,7 +201,16 @@
     <!-- PROTOTYPE -->
     <section id="prototype">
       <h2>Prototype</h2>
-      <div class="screenshot-placeholder">Prototype screenshot coming soon.</div>
+      <p><strong>Status:</strong> Build 1 local prototype. Runs on my laptop with Claude Haiku 5.5 through OpenRouter.</p>
+      <p>The first slice of the core workflow works end to end: add 5+ favorite and 2+ disliked places with a note on each, review and edit what the AI thinks I love or dislike about each one, enter a destination and trip purpose, and get a guide with 1–2 neighborhoods, 3–5 places to eat and 2–3 places to drink. Every pick is tied to a specific favorite and marked unverified.</p>
+      <figure>
+        <img src="images/prototype-taste.jpg" alt="Taste review step: one card per place listing what the AI thinks I love or dislike, each reason editable or removable." />
+        <figcaption>Step two: the app's read of my taste, which I can edit, remove or add to. Sample London favorites.</figcaption>
+      </figure>
+      <figure>
+        <img src="images/prototype-guide.jpg" alt="Guide step: restaurant cards for Lisbon, each with a neighborhood, a reason tied to a London favorite, and an unverified tag." />
+        <figcaption>The guide for a romantic weekend in Lisbon. Each pick names the favorite it's based on.</figcaption>
+      </figure>
     </section>
 
     <!-- COSTS & ANALYTICS (updated weekly) -->
@@ -206,11 +219,11 @@
       <div class="grid-2">
         <div class="stat-box">
           <div class="stat-label">Cumulative Build Spend</div>
-          <div class="stat-value">[Record actual spend]</div>
+          <div class="stat-value">About $0.01 OpenRouter + Claude Pro</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Est. Cost Per User Run</div>
-          <div class="stat-value">[Not yet estimated]</div>
+          <div class="stat-value">About $0.002</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">User Evidence (Analytics from Build 2)</div>
@@ -240,10 +253,11 @@
       <div class="log-entry">
         <h3>Build 1 · Intent.md & Throwaway Prototype (Due Nov 9)</h3>
         <ul>
-          <li><strong>What shipped:</strong> [What you actually built; link your local prototype screenshot or GIF above.]</li>
+          <li><strong>What shipped:</strong> PRD v1 on this page, and a local prototype of the first slice of the core workflow (<a href="#prototype">screenshots above</a>): enter favorite and disliked places with notes, edit the AI's read of my taste, then get a city guide with neighborhoods, places to eat and places to drink, each tied to a specific favorite and marked unverified. Tested end to end with London favorites for Lisbon and Mexico City.</li>
           <li><strong>Things learned with AI:</strong> [What you learned from AI practice and Terminus Episodes 1 and 2.]</li>
-          <li><strong>What broke / changed in PRD:</strong> [Fill in]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
+          <li><strong>What broke:</strong> The app wouldn't start at first because .env still had the placeholder key. In the taste editor, long reasons were cut off, then the boxes collapsed to no height; both fixed.</li>
+          <li><strong>What I learned from testing:</strong> Reasons pulled from short notes were specific and sounded right, which is a good early sign for the riskiest assumption. But some picks leaned toward a dislike (a Lisbon spot known for long queues when I dislike queues; a busy bar tied to "calm"), and at least one neighborhood was wrong. Checking that places exist and match the profile will matter.</li>
+          <li><strong>Cost & time this week:</strong> About $0.01 on OpenRouter (about $0.002 per full run) · [0] hours</li>
         </ul>
       </div>
 
