@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taste Passport</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --cream: #f8f1e7;
+      --card: #fffaf3;
+      --cherry: #9b1b1e;
+      --maroon: #5e1622;
+      --blush: #f2d6d6;
+      --text: #2a1d1a;
+      --muted: #7a6660;
+      --line: #c9a3a3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Poppins", -apple-system, sans-serif;
+      font-weight: 300;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--cream);
+    }
+    h1, h2, h3 {
+      font-family: "Playfair Display", Georgia, serif;
+      text-transform: lowercase;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0;
+    }
+    h1 { font-size: clamp(48px, 9vw, 96px); line-height: 0.95; }
+    h2 { font-size: clamp(40px, 6vw, 64px); line-height: 1; color: var(--cherry); margin-bottom: 12px; }
+    h3 { font-size: 26px; line-height: 1.15; color: var(--maroon); }
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+    .band { padding: 88px 0; }
+    .band.cream { background: var(--cream); }
+    .band.blush { background: var(--blush); }
+    .band.cherry { background: var(--cherry); color: var(--cream); }
+    .band.cherry h2, .band.cherry h3 { color: var(--cream); }
+    .band.maroon { background: var(--maroon); color: var(--cream); }
+    .eyebrow {
+      font-size: 11px; font-weight: 500; letter-spacing: 0.18em;
+      text-transform: uppercase; margin: 0 0 18px;
+    }
+    .intro { max-width: 520px; margin: 0 0 40px; color: var(--muted); }
+    .band.cherry .intro { color: #f3d9d4; }
+    .hidden { display: none !important; }
+
+    /* Hero */
+    .hero { padding: 120px 0 104px; text-align: center; }
+    .hero h1 em { font-style: italic; font-weight: 500; }
+    .hero p.lede { max-width: 520px; margin: 28px auto 36px; color: #ecd5d0; font-size: 16px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-block; font-family: inherit; font-size: 13px; font-weight: 500;
+      letter-spacing: 0.06em; text-transform: lowercase;
+      padding: 12px 30px; border-radius: 999px; cursor: pointer;
+      background: transparent; color: var(--cherry); border: 1px solid var(--cherry);
+      text-decoration: none; transition: background .15s, color .15s;
+    }
+    .btn:hover:not(:disabled) { background: var(--cherry); color: var(--cream); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn.light { color: var(--cream); border-color: var(--cream); }
+    .btn.light:hover:not(:disabled) { background: var(--cream); color: var(--cherry); }
+    .btn.small { padding: 6px 16px; font-size: 12px; }
+    .actions { margin-top: 36px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .status { font-size: 13px; color: var(--muted); }
+    .error { font-size: 13px; color: var(--cherry); font-weight: 500; }
+    .band.cherry .error { color: #ffd9d9; }
+
+    /* Form fields */
+    label.field { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+    input, textarea {
+      width: 100%; font-family: inherit; font-size: 14px; font-weight: 400; color: var(--text);
+      background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+      padding: 10px 14px; outline: none;
+    }
+    input:focus, textarea:focus { border-color: var(--maroon); }
+    textarea { resize: vertical; min-height: 64px; }
+    .home-city { max-width: 360px; margin-bottom: 44px; }
+
+    /* Places entry */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+    .col-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+    .count { font-size: 12px; color: var(--muted); }
+    .place-row {
+      border: 1px solid var(--line); border-radius: 14px; background: var(--card);
+      padding: 14px; margin-bottom: 12px; display: grid; gap: 8px;
+    }
+    .place-row input, .place-row textarea { background: #fff; }
+
+    /* Cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+    .card {
+      background: var(--card); border: 1px solid var(--maroon); border-radius: 16px;
+      padding: 22px 22px 18px; color: var(--text);
+    }
+    .tag {
+      display: inline-block; font-size: 10px; font-weight: 500; letter-spacing: 0.14em;
+      text-transform: uppercase; border: 1px solid currentColor; border-radius: 999px;
+      padding: 2px 10px; margin-bottom: 12px;
+    }
+    .tag.love { color: var(--cherry); }
+    .tag.dislike { color: var(--muted); }
+    .tag.unverified { color: var(--muted); margin: 14px 0 0; }
+
+    /* Taste editor */
+    .trait { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+    .trait textarea { padding: 6px 12px; font-size: 13px; line-height: 1.5; min-height: 0; resize: none; overflow: hidden; }
+    .remove {
+      flex: none; width: 28px; height: 28px; border-radius: 999px; cursor: pointer;
+      border: 1px solid var(--line); background: transparent; color: var(--maroon); font-size: 14px; line-height: 1;
+    }
+    .remove:hover { border-color: var(--maroon); }
+    .card .btn.small { margin-top: 12px; }
+
+    /* Trip */
+    .trip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 760px; }
+    .band.cherry input { background: var(--cream); border-color: transparent; }
+
+    /* Guide */
+    .guide-group { margin-top: 56px; }
+    .guide-group:first-of-type { margin-top: 0; }
+    .guide-group h3 { margin-bottom: 20px; font-size: 32px; }
+    .pick-hood { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 6px 0 12px; }
+    .pick-spacer { height: 12px; }
+    .pick-reason { font-family: "Playfair Display", serif; font-style: italic; font-size: 16px; line-height: 1.5; color: var(--maroon); margin: 0; }
+    .pick-based { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+    .note { font-size: 13px; color: var(--muted); margin-top: 12px; }
+
+    footer { padding: 32px 0; text-align: center; font-size: 12px; letter-spacing: 0.1em; }
+
+    @media (max-width: 720px) {
+      .band { padding: 64px 0; }
+      .two-col, .trip-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <header class="band maroon hero">
+    <div class="wrap">
+      <p class="eyebrow">taste passport</p>
+      <h1>same taste,<br /><em>new city.</em></h1>
+      <p class="lede">Tell us the places you love at home, and the ones you don't. We'll learn why, and find their match wherever you're going.</p>
+      <a class="btn light" href="#places">begin</a>
+    </div>
+  </header>
+
+  <!-- Step 1: places -->
+  <section class="band cream" id="places">
+    <div class="wrap">
+      <p class="eyebrow">step one</p>
+      <h2>your places</h2>
+      <p class="intro">Add at least five places you love and two you don't, with a short note on each. Restaurants, bars, cafes, hotels, anything with a feeling.</p>
+
+      <div class="home-city">
+        <label class="field" for="homeCity">home city</label>
+        <input id="homeCity" placeholder="e.g. London, Mexico City, Chicago" />
+      </div>
+
+      <div class="two-col">
+        <div>
+          <div class="col-head"><h3>places you love</h3><span class="count" id="loveCount"></span></div>
+          <div id="loveList"></div>
+          <button class="btn small" type="button" data-add="love">+ add another</button>
+        </div>
+        <div>
+          <div class="col-head"><h3>places you don't</h3><span class="count" id="dislikeCount"></span></div>
+          <div id="dislikeList"></div>
+          <button class="btn small" type="button" data-add="dislike">+ add another</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="tasteBtn" disabled>read my taste</button>
+        <span class="error" id="tasteError"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 2: taste -->
+  <section class="band blush hidden" id="taste">
+    <div class="wrap">
+      <p class="eyebrow">step two</p>
+      <h2>your taste</h2>
+      <p class="intro">Here's what we think you love, and what you don't, about each place. Edit anything that's off, remove what doesn't fit, or add your own.</p>
+      <div class="cards" id="tasteCards"></div>
+    </div>
+  </section>
+
+  <!-- Step 3: trip -->
+  <section class="band cherry hidden" id="trip">
+    <div class="wrap">
+      <p class="eyebrow">step three</p>
+      <h2>your trip</h2>
+      <p class="intro">Where are you going, and what is the trip for?</p>
+      <div class="trip-grid">
+        <div>
+          <label class="field" for="destination">destination</label>
+          <input id="destination" placeholder="e.g. Lisbon" />
+        </div>
+        <div>
+          <label class="field" for="purpose">what the trip is for</label>
+          <input id="purpose" placeholder="e.g. a romantic weekend" />
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn light" id="guideBtn">make my guide</button>
+        <span class="error" id="guideError"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 4: guide -->
+  <section class="band cream hidden" id="guide">
+    <div class="wrap">
+      <p class="eyebrow">your guide</p>
+      <h2 id="guideTitle">your guide</h2>
+      <p class="intro">Every pick is tied to something you love. These places haven't been checked yet, so confirm they exist and are open before you go.</p>
+      <div id="guideBody"></div>
+    </div>
+  </section>
+
+  <footer class="band maroon">taste passport · local prototype</footer>
+
+  <script>
+    // ---------- Small helpers ----------
+    const $ = (id) => document.getElementById(id);
+
+    // Creates an element. Text is always set with textContent so AI output can't inject HTML.
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text != null) node.textContent = text;
+      return node;
+    }
+
+    async function post(url, body) {
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong.");
+      return data;
+    }
+
+    // ---------- Step 1: entering places ----------
+    const MIN = { love: 5, dislike: 2 };
+
+    function addPlaceRow(kind) {
+      const row = el("div", "place-row");
+      row.dataset.kind = kind;
+      const name = el("input");
+      name.placeholder = "Place name";
+      const note = el("textarea");
+      note.placeholder = kind === "love" ? "What do you love about it?" : "What don't you like about it?";
+      row.append(name, note);
+      $(kind === "love" ? "loveList" : "dislikeList").append(row);
+    }
+
+    // Returns only the rows that have both a name and a note.
+    function filledPlaces() {
+      return [...document.querySelectorAll(".place-row")]
+        .map((row) => ({
+          kind: row.dataset.kind,
+          name: row.querySelector("input").value.trim(),
+          note: row.querySelector("textarea").value.trim(),
+        }))
+        .filter((p) => p.name && p.note);
+    }
+
+    function updateCounts() {
+      const places = filledPlaces();
+      const loves = places.filter((p) => p.kind === "love").length;
+      const dislikes = places.filter((p) => p.kind === "dislike").length;
+      $("loveCount").textContent = `${loves} of ${MIN.love}+ added`;
+      $("dislikeCount").textContent = `${dislikes} of ${MIN.dislike}+ added`;
+      $("tasteBtn").disabled = loves < MIN.love || dislikes < MIN.dislike;
+    }
+
+    for (let i = 0; i < MIN.love; i++) addPlaceRow("love");
+    for (let i = 0; i < MIN.dislike; i++) addPlaceRow("dislike");
+    document.querySelectorAll("[data-add]").forEach((b) => b.addEventListener("click", () => { addPlaceRow(b.dataset.add); updateCounts(); }));
+    $("places").addEventListener("input", updateCounts);
+    updateCounts();
+
+    // ---------- Step 2: reading and editing taste ----------
+    $("tasteBtn").addEventListener("click", async () => {
+      const btn = $("tasteBtn");
+      $("tasteError").textContent = "";
+      btn.disabled = true;
+      btn.textContent = "reading your taste…";
+      try {
+        const data = await post("/api/taste", { homeCity: $("homeCity").value.trim(), places: filledPlaces() });
+        renderTaste(data.places || []);
+        $("taste").classList.remove("hidden");
+        $("trip").classList.remove("hidden");
+        document.querySelectorAll(".trait textarea").forEach(autosize); // size boxes once visible
+        $("taste").scrollIntoView({ behavior: "smooth" });
+      } catch (err) {
+        $("tasteError").textContent = err.message;
+      } finally {
+        btn.textContent = "read my taste";
+        updateCounts();
+      }
+    });
+
+    // Makes a reason box grow to fit its text, so long reasons wrap instead of being cut off.
+    function autosize(box) {
+      box.style.height = "auto";
+      box.style.height = box.scrollHeight + 2 + "px";
+    }
+
+    function addTraitInput(list, value) {
+      const row = el("div", "trait");
+      const input = el("textarea");
+      input.rows = 1;
+      input.value = value || "";
+      input.placeholder = "Add a reason";
+      input.addEventListener("input", () => autosize(input));
+      const remove = el("button", "remove", "×");
+      remove.type = "button";
+      remove.title = "Remove";
+      remove.addEventListener("click", () => row.remove());
+      row.append(input, remove);
+      list.append(row);
+      return input;
+    }
+
+    function renderTaste(places) {
+      const wrap = $("tasteCards");
+      wrap.replaceChildren();
+      places.forEach((p) => {
+        const card = el("div", "card taste-card");
+        card.dataset.kind = p.kind;
+        card.dataset.name = p.name;
+        card.append(el("span", `tag ${p.kind}`, p.kind === "love" ? "you love" : "you don't love"));
+        card.append(el("h3", null, p.name));
+        const list = el("div");
+        (p.traits || []).forEach((t) => addTraitInput(list, t));
+        const add = el("button", "btn small", "+ add a reason");
+        add.type = "button";
+        add.addEventListener("click", () => addTraitInput(list).focus());
+        card.append(list, add);
+        wrap.append(card);
+      });
+    }
+
+    // Reads the (possibly edited) taste cards back into data.
+    function currentTaste() {
+      return [...document.querySelectorAll(".taste-card")].map((card) => ({
+        kind: card.dataset.kind,
+        name: card.dataset.name,
+        traits: [...card.querySelectorAll(".trait textarea")].map((i) => i.value.trim()).filter(Boolean),
+      })).filter((p) => p.traits.length);
+    }
+
+    // ---------- Step 3 & 4: trip and guide ----------
+    $("guideBtn").addEventListener("click", async () => {
+      const btn = $("guideBtn");
+      const destination = $("destination").value.trim();
+      const purpose = $("purpose").value.trim();
+      $("guideError").textContent = "";
+      if (!destination || !purpose) { $("guideError").textContent = "Add a destination and what the trip is for."; return; }
+      btn.disabled = true;
+      btn.textContent = "making your guide…";
+      try {
+        const guide = await post("/api/guide", { homeCity: $("homeCity").value.trim(), places: currentTaste(), destination, purpose });
+        renderGuide(guide, destination);
+        $("guide").classList.remove("hidden");
+        $("guide").scrollIntoView({ behavior: "smooth" });
+      } catch (err) {
+        $("guideError").textContent = err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "make my guide";
+      }
+    });
+
+    function pickCard(p, showHood) {
+      const card = el("div", "card");
+      card.append(el("h3", null, p.name));
+      if (showHood && p.neighborhood) card.append(el("p", "pick-hood", p.neighborhood));
+      else card.append(el("div", "pick-spacer"));
+      card.append(el("p", "pick-reason", p.reason));
+      if (p.basedOn) card.append(el("p", "pick-based", `Based on ${p.basedOn}`));
+      card.append(el("span", "tag unverified", "unverified"));
+      return card;
+    }
+
+    function renderGuide(guide, destination) {
+      $("guideTitle").textContent = destination.toLowerCase();
+      const body = $("guideBody");
+      body.replaceChildren();
+      const groups = [
+        ["where to stay", guide.neighborhoods, false],
+        ["where to eat", guide.eat, true],
+        ["where to drink", guide.drink, true],
+      ];
+      groups.forEach(([title, picks, showHood]) => {
+        const group = el("div", "guide-group");
+        group.append(el("h3", null, title));
+        const cards = el("div", "cards");
+        (picks || []).forEach((p) => cards.append(pickCard(p, showHood)));
+        group.append(cards);
+        body.append(group);
+      });
+    }
+  </script>
+</body>
+</html>
