@@ -14,6 +14,9 @@ const path = require("path");
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.OPENROUTER_API_KEY;
 const MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-5.5";
+// Web search lets the AI look up current places in the destination, on top of what it already knows.
+// Set WEB_SEARCH=off in .env to turn it off (cheaper, but picks come from memory only).
+const WEB_SEARCH = process.env.WEB_SEARCH !== "off";
 
 if (!API_KEY || API_KEY.includes("replace-with-your-key")) {
   console.error("Missing OPENROUTER_API_KEY. Add it to .env and start with: node --env-file=.env app/server.js");
@@ -23,7 +26,8 @@ if (!API_KEY || API_KEY.includes("replace-with-your-key")) {
 // ---------- AI helper ----------
 
 // Sends one prompt to OpenRouter and returns the reply parsed as JSON.
-async function askAI(system, user) {
+// With { webSearch: true } the AI may search the web (up to 3 times) before answering.
+async function askAI(system, user, { webSearch = false } = {}) {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -40,13 +44,14 @@ async function askAI(system, user) {
       temperature: 0.4,
       max_tokens: 6000, // a full guide uses about 3,000; this caps the cost of any single call
       usage: { include: true }, // asks OpenRouter to report the cost of this call
+      ...(webSearch && { tools: [{ type: "openrouter:web_search", parameters: { max_uses: 3 } }] }),
     }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error?.message || `OpenRouter error ${res.status}`);
 
   const cost = data.usage?.cost;
-  console.log(`  ${MODEL} · ${data.usage?.prompt_tokens} in / ${data.usage?.completion_tokens} out tokens · $${cost ?? "?"}`);
+  console.log(`  ${MODEL}${webSearch ? " · web search on" : ""} · ${data.usage?.prompt_tokens} in / ${data.usage?.completion_tokens} out tokens · $${cost ?? "?"}`);
 
   // The model is told to reply with JSON only; grab the {...} part in case it adds extra text.
   const text = data.choices?.[0]?.message?.content || "";
@@ -92,6 +97,7 @@ How to pick:
 - Never list the same place twice.
 - Only recommend real places you are confident exist in the destination. Do not invent places.
 - Fit the picks to what the trip is for.
+- If you can search the web, use it (at most 3 searches) to check where the crowd from their favorites actually lives and goes out in the destination today, and to check that your picks exist, are open, and are in the neighborhood you say. Search in English and in the destination's language when useful. Still reply with JSON only.
 - Do not include prices, price levels, opening hours, addresses, phone numbers, ratings, or reservation details. Name and neighborhood only.
 - Reply with JSON only, no other text, in this shape:
 {"areaMatches":[{"favorite":"...","homeNeighborhood":"...","destinationNeighborhood":"..."}],
@@ -128,7 +134,7 @@ async function handleGuide(body) {
     `PLACES THEY DISLIKE (and why) — avoid anything like these:\n${describe("dislike")}\n\n` +
     `Destination: ${destination}\nWhat the trip is for: ${purpose}`;
 
-  let guide = await askAI(GUIDE_SYSTEM, user);
+  let guide = await askAI(GUIDE_SYSTEM, user, { webSearch: WEB_SEARCH });
 
   // If the guide came back too short, ask the AI once more and say exactly what was missing.
   const count = (list) => (Array.isArray(list) ? list.length : 0);
@@ -136,7 +142,8 @@ async function handleGuide(body) {
     console.log(`  guide too short (${count(guide.eat)} eat, ${count(guide.drink)} drink), asking again`);
     const retry = await askAI(
       GUIDE_SYSTEM,
-      user + `\n\nYour last answer was too short: it had ${count(guide.eat)} places to eat and ${count(guide.drink)} places to drink. Return at least 3 places to eat and at least 2 places to drink.`
+      user + `\n\nYour last answer was too short: it had ${count(guide.eat)} places to eat and ${count(guide.drink)} places to drink. Return at least 3 places to eat and at least 2 places to drink.`,
+      { webSearch: WEB_SEARCH }
     );
     // Keep whichever answer has more picks.
     if (count(retry.eat) + count(retry.drink) > count(guide.eat) + count(guide.drink)) guide = retry;
@@ -194,4 +201,4 @@ http
     res.writeHead(404);
     res.end("Not found");
   })
-  .listen(PORT, () => console.log(`Taste Passport running at http://localhost:${PORT} (model: ${MODEL})`));
+  .listen(PORT, () => console.log(`Taste Passport running at http://localhost:${PORT} (model: ${MODEL}, web search: ${WEB_SEARCH ? "on" : "off"})`));
