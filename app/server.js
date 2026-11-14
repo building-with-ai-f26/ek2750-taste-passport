@@ -58,8 +58,32 @@ async function askAI(system, user, { webSearch = false } = {}) {
   const text = data.choices?.[0]?.message?.content || "";
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("The AI reply wasn't in the expected format. Try again.");
-  return JSON.parse(text.slice(start, end + 1));
+  try {
+    if (start === -1 || end === -1) throw new Error("no JSON found");
+    return JSON.parse(text.slice(start, end + 1));
+  } catch (err) {
+    // Show where the reply broke, so we can see why (e.g. extra text or citations mixed into the JSON).
+    const pos = Number(err.message.match(/position (\d+)/)?.[1] ?? 0) + Math.max(start, 0);
+    console.error(`  reply wasn't valid JSON (${err.message}). Text around the problem: …${text.slice(Math.max(pos - 120, 0), pos + 80).replace(/\n/g, "⏎")}…`);
+    const formatError = new Error("The AI reply wasn't in the expected format. Try again.");
+    formatError.raw = text; // kept so askAIWithRetry can try to repair it
+    throw formatError;
+  }
+}
+
+// Same as askAI, but if the reply comes back as broken JSON, sends it back once (no web search,
+// so it's fast and costs under a cent) and asks for the same content as valid JSON.
+async function askAIWithRetry(system, user, options) {
+  try {
+    return await askAI(system, user, options);
+  } catch (err) {
+    if (!err.raw) throw err;
+    console.log("  repairing a broken reply");
+    return askAI(
+      "You fix broken JSON. Return the same content as valid JSON only, no other text. Keep every field and value; only fix the formatting (quotes, commas, brackets) and remove anything that isn't part of the JSON.",
+      err.raw
+    );
+  }
 }
 
 // ---------- Prompts ----------
@@ -135,13 +159,13 @@ async function handleGuide(body) {
     `PLACES THEY DISLIKE (and why) — avoid anything like these:\n${describe("dislike")}\n\n` +
     `Destination: ${destination}\nWhat the trip is for: ${purpose}`;
 
-  let guide = await askAI(GUIDE_SYSTEM, user, { webSearch: WEB_SEARCH });
+  let guide = await askAIWithRetry(GUIDE_SYSTEM, user, { webSearch: WEB_SEARCH });
 
   // If the guide came back too short, ask the AI once more and say exactly what was missing.
   const count = (list) => (Array.isArray(list) ? list.length : 0);
   if (count(guide.eat) < 3 || count(guide.drink) < 2 || count(guide.neighborhoods) < 1) {
     console.log(`  guide too short (${count(guide.eat)} eat, ${count(guide.drink)} drink), asking again`);
-    const retry = await askAI(
+    const retry = await askAIWithRetry(
       GUIDE_SYSTEM,
       user + `\n\nYour last answer was too short: it had ${count(guide.eat)} places to eat and ${count(guide.drink)} places to drink. Return at least 3 places to eat and at least 2 places to drink.`,
       { webSearch: WEB_SEARCH }
