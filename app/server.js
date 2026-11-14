@@ -38,6 +38,7 @@ async function askAI(system, user) {
         { role: "user", content: user },
       ],
       temperature: 0.4,
+      max_tokens: 6000, // a full guide uses about 3,000; this caps the cost of any single call
       usage: { include: true }, // asks OpenRouter to report the cost of this call
     }),
   });
@@ -77,24 +78,26 @@ STEP 1: Understand the whole person first.
 Look across ALL their favorites together and write a taste summary:
 - "vibe": one or two sentences describing the kind of places this person likes overall.
 - "patterns": 3 to 5 things that show up in several of their favorites (e.g. "small and unfussy", "a creative crowd", "dressed-up glamour", "cheap and fast").
-- "avoid": 3 to 5 things to stay away from, taken from their dislikes and the reasons they gave.
+- "avoid": 2 to 4 things to stay away from. Use ONLY what they actually said in their dislikes. Do not add anything they didn't say, and never put something on the avoid list that their favorites have (e.g. if they love a buzzy, see-and-be-seen place, "sceney" is not something to avoid).
 A single favorite that doesn't match the rest is an exception, not the main taste. Don't build the guide around it.
 
 STEP 2: Pick places that fit the whole summary.
 Return 2 neighborhoods to stay in, 3 to 5 places to eat, and 2 to 3 places to drink.
 - Only recommend real places you are confident exist in the destination. Do not invent places.
 - Every pick must fit the overall vibe and patterns, not just one favorite. Write the reason as one short line that names the pattern it fits, and mention one or two of THIS person's favorites it's like, e.g. "Small, unfussy counter spot, like <favorite A> and <favorite B>." Only name places from their list. Never generic (e.g. "great food", "popular spot").
-- Choose neighborhoods the way a local with this person's taste would, not the way a guidebook would. Don't default to the most famous tourist areas unless they truly fit this person.
+- Choose the neighborhoods this person would want to be in, based on their taste. If they like trendy, popular, polished places, the buzzy, well-known areas are the right answer. If they like scrappy, creative places, pick the creative areas. Popular is not a bad thing unless their dislikes say so.
+- Keep the trip central and easy to get around. Don't send them to the outskirts or far-out neighborhoods unless their taste clearly points there.
 - Use specific neighborhood names a local would use (e.g. a single neighborhood, not a whole district that contains several).
 - Never list the same place twice.
-- Spread the eat and drink picks across at least 3 different neighborhoods, with no more than half of them in any one neighborhood. Keep some picks near where they're staying so the trip is practical.
+- Don't put more than half of the eat and drink picks in a single neighborhood. Spread them across a few nearby, central neighborhoods that fit the person, mostly close to where they're staying.
+- Put each place in the right section: "eat" is for places people mainly go to for a meal, "drink" is for bars and places people mainly go to for drinks.
 - Fit the picks to what the trip is for.
 - Do not include prices, price levels, opening hours, addresses, phone numbers, ratings, or reservation details. Name and neighborhood only.
 
 STEP 3: Check before you answer.
-Go through every pick and compare it with the "avoid" list. If a place is known for anything on that list (e.g. loud, sceney, touristy, pricey, divey), replace it with one that fits. Also check that you have at least 3 places to eat, at least 2 places to drink, and at least 3 different neighborhoods.
+Go through every pick and compare it with the "avoid" list. If a place is known for anything on that list, replace it with one that fits. Then ask: would this person, based on their favorites, actually be excited to go here? If not, replace it. Also check that you have at least 3 places to eat and at least 2 places to drink.
 
-Reply with JSON only, no other text, in this shape:
+Do these checks silently. Don't write out your checking. Reply with JSON only, no other text, in this shape:
 {"tasteSummary":{"vibe":"...","patterns":["..."],"avoid":["..."]},
  "neighborhoods":[{"name":"...","reason":"...","basedOn":"<one or two favorite place names>"}],
  "eat":[{"name":"...","neighborhood":"...","reason":"...","basedOn":"<one or two favorite place names>"}],
