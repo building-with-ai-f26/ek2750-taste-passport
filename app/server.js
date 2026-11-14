@@ -13,7 +13,7 @@ const path = require("path");
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.OPENROUTER_API_KEY;
-const MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-haiku-5.5";
+const MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-5.5";
 
 if (!API_KEY || API_KEY.includes("replace-with-your-key")) {
   console.error("Missing OPENROUTER_API_KEY. Add it to .env and start with: node --env-file=.env app/server.js");
