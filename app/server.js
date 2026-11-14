@@ -13,11 +13,11 @@ const path = require("path");
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.OPENROUTER_API_KEY;
-const MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-5.5";
+const MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-haiku-5.5";
 // Web search lets the AI look up current places in the destination, on top of what it already knows.
 // Set WEB_SEARCH=off in .env to turn it off (cheaper, but picks come from memory only).
 const WEB_SEARCH = process.env.WEB_SEARCH !== "off";
-const SEARCH_MAX = Number(process.env.WEB_SEARCH_MAX || 3); // most searches per guide; each one adds cost
+const SEARCH_MAX = Number(process.env.WEB_SEARCH_MAX || 1); // most searches per guide; each one adds cost
 
 if (!API_KEY || API_KEY.includes("replace-with-your-key")) {
   console.error("Missing OPENROUTER_API_KEY. Add it to .env and start with: node --env-file=.env app/server.js");
