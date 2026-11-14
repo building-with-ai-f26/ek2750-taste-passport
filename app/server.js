@@ -71,21 +71,34 @@ Keep the places in the same order and with the same names you were given.`;
 const GUIDE_SYSTEM = `You are a travel guide who recommends places based on a person's personal taste profile.
 You will get their home city, the places they love and dislike at home with the reasons why, a destination, and what the trip is for.
 
-Return:
-- 1 to 2 neighborhoods to stay in
-- 3 to 5 places to eat
-- 2 to 3 places to drink
+Work in three steps.
 
-Rules:
+STEP 1: Understand the whole person first.
+Look across ALL their favorites together and write a taste summary:
+- "vibe": one or two sentences describing the kind of places this person likes overall.
+- "patterns": 3 to 5 things that show up in several of their favorites (e.g. "small and unfussy", "a creative crowd", "dressed-up glamour", "cheap and fast").
+- "avoid": 3 to 5 things to stay away from, taken from their dislikes and the reasons they gave.
+A single favorite that doesn't match the rest is an exception, not the main taste. Don't build the guide around it.
+
+STEP 2: Pick places that fit the whole summary.
+Return 2 neighborhoods to stay in, 3 to 5 places to eat, and 2 to 3 places to drink.
 - Only recommend real places you are confident exist in the destination. Do not invent places.
-- Every pick must be tied to ONE specific favorite place and ONE specific reason from the profile. Write the reason as one line, like "Because you love the counter seating at Place X." Never generic (e.g. "great food", "popular spot").
-- Never recommend anything that matches a dislike. If a place is known for something they dislike (e.g. loud, sceney, touristy), leave it out.
+- Every pick must fit the overall vibe and patterns, not just one favorite. Write the reason as one short line that names the pattern it fits, and mention one or two of THIS person's favorites it's like, e.g. "Small, unfussy counter spot, like <favorite A> and <favorite B>." Only name places from their list. Never generic (e.g. "great food", "popular spot").
+- Choose neighborhoods the way a local with this person's taste would, not the way a guidebook would. Don't default to the most famous tourist areas unless they truly fit this person.
+- Use specific neighborhood names a local would use (e.g. a single neighborhood, not a whole district that contains several).
+- Never list the same place twice.
+- Spread the eat and drink picks across at least 3 different neighborhoods, with no more than half of them in any one neighborhood. Keep some picks near where they're staying so the trip is practical.
 - Fit the picks to what the trip is for.
 - Do not include prices, price levels, opening hours, addresses, phone numbers, ratings, or reservation details. Name and neighborhood only.
-- Reply with JSON only, no other text, in this shape:
-{"neighborhoods":[{"name":"...","reason":"...","basedOn":"<favorite place name>"}],
- "eat":[{"name":"...","neighborhood":"...","reason":"...","basedOn":"<favorite place name>"}],
- "drink":[{"name":"...","neighborhood":"...","reason":"...","basedOn":"<favorite place name>"}]}`;
+
+STEP 3: Check before you answer.
+Go through every pick and compare it with the "avoid" list. If a place is known for anything on that list (e.g. loud, sceney, touristy, pricey, divey), replace it with one that fits. Also check that you have at least 3 places to eat, at least 2 places to drink, and at least 3 different neighborhoods.
+
+Reply with JSON only, no other text, in this shape:
+{"tasteSummary":{"vibe":"...","patterns":["..."],"avoid":["..."]},
+ "neighborhoods":[{"name":"...","reason":"...","basedOn":"<one or two favorite place names>"}],
+ "eat":[{"name":"...","neighborhood":"...","reason":"...","basedOn":"<one or two favorite place names>"}],
+ "drink":[{"name":"...","neighborhood":"...","reason":"...","basedOn":"<one or two favorite place names>"}]}`;
 
 // ---------- Request handlers ----------
 
@@ -116,11 +129,24 @@ async function handleGuide(body) {
     `PLACES THEY DISLIKE (and why) — avoid anything like these:\n${describe("dislike")}\n\n` +
     `Destination: ${destination}\nWhat the trip is for: ${purpose}`;
 
-  const guide = await askAI(GUIDE_SYSTEM, user);
+  let guide = await askAI(GUIDE_SYSTEM, user);
+
+  // If the guide came back too short, ask the AI once more and say exactly what was missing.
+  const count = (list) => (Array.isArray(list) ? list.length : 0);
+  if (count(guide.eat) < 3 || count(guide.drink) < 2 || count(guide.neighborhoods) < 1) {
+    console.log(`  guide too short (${count(guide.eat)} eat, ${count(guide.drink)} drink), asking again`);
+    const retry = await askAI(
+      GUIDE_SYSTEM,
+      user + `\n\nYour last answer was too short: it had ${count(guide.eat)} places to eat and ${count(guide.drink)} places to drink. Return at least 3 places to eat and at least 2 places to drink.`
+    );
+    // Keep whichever answer has more picks.
+    if (count(retry.eat) + count(retry.drink) > count(guide.eat) + count(guide.drink)) guide = retry;
+  }
 
   // Enforce the size limits and mark every pick as unverified (we don't check places exist yet).
   const clean = (list, max) => (Array.isArray(list) ? list.slice(0, max) : []).map((p) => ({ ...p, verified: false }));
   return {
+    tasteSummary: guide.tasteSummary || null,
     neighborhoods: clean(guide.neighborhoods, 2),
     eat: clean(guide.eat, 5),
     drink: clean(guide.drink, 3),

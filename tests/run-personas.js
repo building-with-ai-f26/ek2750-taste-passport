@@ -21,6 +21,13 @@ async function post(url, body) {
   return data;
 }
 
+// Counts how many eat + drink picks land in each neighborhood, e.g. "Beyoğlu ×5, Nişantaşı ×1".
+function hoodCounts(guide) {
+  const counts = {};
+  for (const p of [...guide.eat, ...guide.drink]) counts[p.neighborhood || "?"] = (counts[p.neighborhood || "?"] || 0) + 1;
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([hood, n]) => `${hood} ×${n}`).join(", ");
+}
+
 // Turns one section of the guide into a Markdown table with empty score columns.
 function table(title, picks) {
   let out = `**${title}**\n\n| Pick | Why the app chose it | Real place? | Would they like it? | Clashes with a dislike? |\n|---|---|---|---|---|\n`;
@@ -50,7 +57,13 @@ async function main() {
     for (const destination of DESTINATIONS) {
       console.log(`  ...guide for ${destination}`);
       const guide = await post("/api/guide", { homeCity: persona.homeCity, places: taste.places, destination, purpose: persona.purpose });
-      md += `### ${destination}\n\n` + table("Stay", guide.neighborhoods) + table("Eat", guide.eat) + table("Drink", guide.drink);
+      md += `### ${destination}\n\n`;
+      if (guide.tasteSummary) {
+        const t = guide.tasteSummary;
+        md += `**Taste summary:** ${t.vibe}\n\n- Patterns: ${(t.patterns || []).join("; ")}\n- Avoid: ${(t.avoid || []).join("; ")}\n\n`;
+      }
+      md += table("Stay", guide.neighborhoods) + table("Eat", guide.eat) + table("Drink", guide.drink);
+      md += `**Eat + drink neighborhoods:** ${hoodCounts(guide)}\n\n`;
       md += `Score: __ of ${guide.neighborhoods.length + guide.eat.length + guide.drink.length} picks they'd like · __ dislike clashes · __ places that don't exist\n\n`;
     }
   }
