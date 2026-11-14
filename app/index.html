@@ -134,10 +134,6 @@
     .pick-spacer { height: 12px; }
     .pick-reason { font-family: "Playfair Display", serif; font-style: italic; font-size: 16px; line-height: 1.5; color: var(--maroon); margin: 0; }
     .pick-based { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
-    .summary { max-width: 760px; }
-    .summary .pick-reason { font-size: 19px; }
-    .summary-list { font-size: 14px; line-height: 1.6; margin: 14px 0 0; }
-    .summary-list strong { color: var(--maroon); font-weight: 600; }
     .note { font-size: 13px; color: var(--muted); margin-top: 12px; }
 
     footer { padding: 32px 0; text-align: center; font-size: 12px; letter-spacing: 0.1em; }
@@ -413,24 +409,6 @@
       const body = $("guideBody");
       body.replaceChildren();
 
-      // How the app read this person's overall taste, so they can check it "got" them.
-      const t = guide.tasteSummary;
-      if (t) {
-        const summary = el("div", "card summary");
-        summary.append(el("span", "tag love", "how we read your taste"));
-        summary.append(el("p", "pick-reason", t.vibe));
-        if (t.patterns?.length) {
-          const p = el("p", "summary-list");
-          p.append(el("strong", null, "You like: "), (t.patterns || []).join(" · "));
-          summary.append(p);
-        }
-        if (t.avoid?.length) {
-          const p = el("p", "summary-list");
-          p.append(el("strong", null, "We avoided: "), (t.avoid || []).join(" · "));
-          summary.append(p);
-        }
-        body.append(summary);
-      }
       const groups = [
         ["where to stay", guide.neighborhoods, false],
         ["where to eat", guide.eat, true],

@@ -65,43 +65,39 @@ Rules:
 - 2 to 4 short phrases per place, each under 8 words, in plain everyday language.
 - Stay grounded in the note. You may add what is widely known about the place only if it clearly fits the note.
 - Be specific (e.g. "counter seating facing the kitchen", "special without being expensive", "too loud to talk"). Never generic (e.g. "good food", "nice vibe").
+- Add one more trait that starts with "Crowd: " and says plainly and specifically who typically goes there: their age, style, budget, and whether they are mostly locals or visitors (e.g. "Crowd: affluent, fashionable locals dressing up for a big night", "Crowd: young artists and musicians on a budget"). Be honest but never insulting.
+- Write everything in English.
 - Reply with JSON only, no other text, in this shape:
 {"places":[{"name":"...","kind":"love" or "dislike","traits":["...","..."]}]}
 Keep the places in the same order and with the same names you were given.`;
 
 const GUIDE_SYSTEM = `You are a travel guide who recommends places based on a person's personal taste profile.
-You will get their home city, the places they love and dislike at home with the reasons why, a destination, and what the trip is for.
+You will get their home city, the places they love and dislike at home (what they love or dislike about each, and the crowd that goes there), a destination, and what the trip is for.
 
-Work in three steps.
+Return:
+- 1 to 2 neighborhoods to stay in
+- 3 to 5 places to eat
+- 2 to 3 places to drink
 
-STEP 1: Understand the whole person first.
-Look across ALL their favorites together and write a taste summary:
-- "vibe": one or two sentences describing the kind of places this person likes overall.
-- "patterns": 3 to 5 things that show up in several of their favorites (e.g. "small and unfussy", "a creative crowd", "dressed-up glamour", "cheap and fast").
-- "avoid": 2 to 4 things to stay away from. Use ONLY what they actually said in their dislikes. Do not add anything they didn't say, and never put something on the avoid list that their favorites have (e.g. if they love a buzzy, see-and-be-seen place, "sceney" is not something to avoid).
-A single favorite that doesn't match the rest is an exception, not the main taste. Don't build the guide around it.
+First, match neighborhoods: for each favorite, note which neighborhood of their home city it is in. Then name the neighborhood in the destination that plays the same role for the same crowd (the place where the same kind of people live, go out and spend time). Choose where to stay, and most of the picks, from these matching neighborhoods.
 
-STEP 2: Pick places that fit the whole summary.
-Return 2 neighborhoods to stay in, 3 to 5 places to eat, and 2 to 3 places to drink.
-- Only recommend real places you are confident exist in the destination. Do not invent places.
-- Every pick must fit the overall vibe and patterns, not just one favorite. Write the reason as one short line that names the pattern it fits, and mention one or two of THIS person's favorites it's like, e.g. "Small, unfussy counter spot, like <favorite A> and <favorite B>." Only name places from their list. Never generic (e.g. "great food", "popular spot").
-- Choose the neighborhoods this person would want to be in, based on their taste. If they like trendy, popular, polished places, the buzzy, well-known areas are the right answer. If they like scrappy, creative places, pick the creative areas. Popular is not a bad thing unless their dislikes say so.
-- Keep the trip central and easy to get around. Don't send them to the outskirts or far-out neighborhoods unless their taste clearly points there.
-- Use specific neighborhood names a local would use (e.g. a single neighborhood, not a whole district that contains several).
+How to pick:
+- Each pick should be where the same crowd that goes to one of their favorites would go in the destination, for the same reason they love that favorite. Think: "what is the destination's version of this place, for these people?"
+- Usually tie a pick to one favorite. Use two only when a place clearly fits both.
+- Neighborhoods to stay in: where that crowd spends its time in the destination, and where a visitor can actually stay.
+- Write the reason as one line naming the favorite and the specific reason, like "Because you love the counter seating at Place X." Only name places from their list. Never generic (e.g. "great food", "popular spot").
+- Never recommend anything that matches what they said in their dislikes.
+- Don't put more than half of the eat and drink picks in one neighborhood.
+- "eat" is for places people mainly go to for a meal; "drink" is for bars and places people mainly go to for drinks.
 - Never list the same place twice.
-- Don't put more than half of the eat and drink picks in a single neighborhood. Spread them across a few nearby, central neighborhoods that fit the person, mostly close to where they're staying.
-- Put each place in the right section: "eat" is for places people mainly go to for a meal, "drink" is for bars and places people mainly go to for drinks.
+- Only recommend real places you are confident exist in the destination. Do not invent places.
 - Fit the picks to what the trip is for.
 - Do not include prices, price levels, opening hours, addresses, phone numbers, ratings, or reservation details. Name and neighborhood only.
-
-STEP 3: Check before you answer.
-Go through every pick and compare it with the "avoid" list. If a place is known for anything on that list, replace it with one that fits. Then ask: would this person, based on their favorites, actually be excited to go here? If not, replace it. Also check that you have at least 3 places to eat and at least 2 places to drink.
-
-Do these checks silently. Don't write out your checking. Reply with JSON only, no other text, in this shape:
-{"tasteSummary":{"vibe":"...","patterns":["..."],"avoid":["..."]},
- "neighborhoods":[{"name":"...","reason":"...","basedOn":"<one or two favorite place names>"}],
- "eat":[{"name":"...","neighborhood":"...","reason":"...","basedOn":"<one or two favorite place names>"}],
- "drink":[{"name":"...","neighborhood":"...","reason":"...","basedOn":"<one or two favorite place names>"}]}`;
+- Reply with JSON only, no other text, in this shape:
+{"areaMatches":[{"favorite":"...","homeNeighborhood":"...","destinationNeighborhood":"..."}],
+ "neighborhoods":[{"name":"...","reason":"...","basedOn":"<favorite place name>"}],
+ "eat":[{"name":"...","neighborhood":"...","reason":"...","basedOn":"<favorite place name>"}],
+ "drink":[{"name":"...","neighborhood":"...","reason":"...","basedOn":"<favorite place name>"}]}`;
 
 // ---------- Request handlers ----------
 
@@ -149,7 +145,7 @@ async function handleGuide(body) {
   // Enforce the size limits and mark every pick as unverified (we don't check places exist yet).
   const clean = (list, max) => (Array.isArray(list) ? list.slice(0, max) : []).map((p) => ({ ...p, verified: false }));
   return {
-    tasteSummary: guide.tasteSummary || null,
+    areaMatches: Array.isArray(guide.areaMatches) ? guide.areaMatches : [],
     neighborhoods: clean(guide.neighborhoods, 2),
     eat: clean(guide.eat, 5),
     drink: clean(guide.drink, 3),

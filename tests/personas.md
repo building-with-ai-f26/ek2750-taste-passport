@@ -36,7 +36,7 @@ Also check across personas: if the same place shows up for two different people,
 
 - **Home city:** New York
 - **Destination:** London (then repeat with Istanbul)
-- **What the trip is for:** a 4-day solo trip, mostly eating, drinking and wandering
+- **What the trip is for:** a 4-day trip with a friend
 
 | | Place | Note |
 |---|---|---|
@@ -54,7 +54,7 @@ Also check across personas: if the same place shows up for two different people,
 
 - **Home city:** New York
 - **Destination:** London (then repeat with Istanbul)
-- **What the trip is for:** a 4-day solo trip, mostly eating, drinking and wandering
+- **What the trip is for:** a 4-day trip with a friend
 
 | | Place | Note |
 |---|---|---|
@@ -72,7 +72,7 @@ Also check across personas: if the same place shows up for two different people,
 
 - **Home city:** New York
 - **Destination:** London (then repeat with Istanbul)
-- **What the trip is for:** a 4-day solo trip, mostly eating, drinking and wandering
+- **What the trip is for:** a 4-day trip with a friend
 
 | | Place | Note |
 |---|---|---|

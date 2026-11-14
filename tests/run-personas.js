@@ -62,6 +62,7 @@ async function main() {
         const t = guide.tasteSummary;
         md += `**Taste summary:** ${t.vibe}\n\n- Patterns: ${(t.patterns || []).join("; ")}\n- Avoid: ${(t.avoid || []).join("; ")}\n\n`;
       }
+      if (guide.areaMatches?.length) md += `**Neighborhood matches:** ${guide.areaMatches.map((m) => `${m.favorite} (${m.homeNeighborhood}) → ${m.destinationNeighborhood}`).join("; ")}\n\n`;
       md += table("Stay", guide.neighborhoods) + table("Eat", guide.eat) + table("Drink", guide.drink);
       md += `**Eat + drink neighborhoods:** ${hoodCounts(guide)}\n\n`;
       md += `Score: __ of ${guide.neighborhoods.length + guide.eat.length + guide.drink.length} picks they'd like · __ dislike clashes · __ places that don't exist\n\n`;
