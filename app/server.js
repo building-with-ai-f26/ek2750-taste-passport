@@ -17,6 +17,7 @@ const MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-5.5";
 // Web search lets the AI look up current places in the destination, on top of what it already knows.
 // Set WEB_SEARCH=off in .env to turn it off (cheaper, but picks come from memory only).
 const WEB_SEARCH = process.env.WEB_SEARCH !== "off";
+const SEARCH_MAX = Number(process.env.WEB_SEARCH_MAX || 3); // most searches per guide; each one adds cost
 
 if (!API_KEY || API_KEY.includes("replace-with-your-key")) {
   console.error("Missing OPENROUTER_API_KEY. Add it to .env and start with: node --env-file=.env app/server.js");
@@ -26,7 +27,7 @@ if (!API_KEY || API_KEY.includes("replace-with-your-key")) {
 // ---------- AI helper ----------
 
 // Sends one prompt to OpenRouter and returns the reply parsed as JSON.
-// With { webSearch: true } the AI may search the web (up to 3 times) before answering.
+// With { webSearch: true } the AI may search the web (up to SEARCH_MAX times) before answering.
 async function askAI(system, user, { webSearch = false } = {}) {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -44,7 +45,7 @@ async function askAI(system, user, { webSearch = false } = {}) {
       temperature: 0.4,
       max_tokens: 6000, // a full guide uses about 3,000; this caps the cost of any single call
       usage: { include: true }, // asks OpenRouter to report the cost of this call
-      ...(webSearch && { tools: [{ type: "openrouter:web_search", parameters: { max_uses: 3 } }] }),
+      ...(webSearch && { tools: [{ type: "openrouter:web_search", parameters: { max_uses: SEARCH_MAX } }] }),
     }),
   });
   const data = await res.json();
@@ -97,7 +98,7 @@ How to pick:
 - Never list the same place twice.
 - Only recommend real places you are confident exist in the destination. Do not invent places.
 - Fit the picks to what the trip is for.
-- If you can search the web, use it (at most 3 searches) to check where the crowd from their favorites actually lives and goes out in the destination today, and to check that your picks exist, are open, and are in the neighborhood you say. Search in English and in the destination's language when useful. Still reply with JSON only.
+- If you can search the web, use it (at most ${SEARCH_MAX} ${SEARCH_MAX === 1 ? "search" : "searches"}) to check where the crowd from their favorites actually lives and goes out in the destination today, and to check that your picks exist, are open, and are in the neighborhood you say. Search in English and in the destination's language when useful. Still reply with JSON only.
 - Do not include prices, price levels, opening hours, addresses, phone numbers, ratings, or reservation details. Name and neighborhood only.
 - Reply with JSON only, no other text, in this shape:
 {"areaMatches":[{"favorite":"...","homeNeighborhood":"...","destinationNeighborhood":"..."}],
@@ -201,4 +202,4 @@ http
     res.writeHead(404);
     res.end("Not found");
   })
-  .listen(PORT, () => console.log(`Taste Passport running at http://localhost:${PORT} (model: ${MODEL}, web search: ${WEB_SEARCH ? "on" : "off"})`));
+  .listen(PORT, () => console.log(`Taste Passport running at http://localhost:${PORT} (model: ${MODEL}, web search: ${WEB_SEARCH ? `on, up to ${SEARCH_MAX}` : "off"})`));
