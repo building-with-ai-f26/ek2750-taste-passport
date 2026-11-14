@@ -1,0 +1,17 @@
+{
+  "persona": "Brooke — mainstream / trendy",
+  "about": "27, lives on the Upper East Side, works in marketing. Loves pretty, buzzy, see-and-be-seen places she can dress up for and post about. Dislikes divey, scruffy or hard-to-get-to spots.",
+  "homeCity": "New York",
+  "purpose": "a 4-day solo trip, mostly eating, drinking and wandering",
+  "places": [
+    { "kind": "love", "name": "Carbone", "note": "Glamorous, waiters in tuxedos, the spicy rigatoni. Feels like a special night out and you might see someone famous." },
+    { "kind": "love", "name": "Sadelle's", "note": "Gorgeous brunch, the bagel tower is so photogenic. Bright and buzzy, perfect with friends." },
+    { "kind": "love", "name": "Bemelmans Bar", "note": "Classic, glamorous hotel bar with live piano. Great martinis, I love getting dressed up for it." },
+    { "kind": "love", "name": "Ralph's Coffee", "note": "So cute and polished, green and white everything. My go-to coffee stop when I'm shopping." },
+    { "kind": "love", "name": "Le Bain", "note": "Rooftop at The Standard with amazing views and a fun dance floor. Great for a big night out." }
+  ],
+  "dislikes": [
+    { "kind": "dislike", "name": "Roberta's", "note": "Long trek to Bushwick, picnic tables and too hipster. Not my scene at all." },
+    { "kind": "dislike", "name": "Sunny's Bar", "note": "Dark and divey, hard to get to and they barely make cocktails." }
+  ]
+}
