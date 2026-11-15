@@ -111,6 +111,8 @@
     .tag.love { color: var(--cherry); }
     .tag.dislike { color: var(--muted); }
     .tag.unverified { color: var(--muted); margin: 14px 0 0; }
+    .pick-links { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0 0; font-size: 13px; }
+    .pick-links a { color: var(--cherry); font-weight: 500; text-underline-offset: 3px; }
 
     /* Taste editor */
     .trait { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
@@ -393,13 +395,34 @@
       }
     });
 
-    function pickCard(p, showHood) {
+    // Opens in a new tab. Only the place name, neighborhood and city go into the link.
+    function linkTo(label, url) {
+      const a = el("a", null, label);
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      return a;
+    }
+
+    // Booking links for one pick: a map for everything, plus a hotel search for
+    // neighborhoods and a table-booking search for places to eat.
+    function pickLinks(p, type, destination) {
+      const where = [p.name, p.neighborhood, destination].filter(Boolean).join(", ");
+      const links = el("p", "pick-links");
+      links.append(linkTo("Map", `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(where)}`));
+      if (type === "stay") links.append(linkTo("Find a hotel", `https://www.google.com/travel/search?q=${encodeURIComponent(`hotels in ${p.name}, ${destination}`)}`));
+      if (type === "eat") links.append(linkTo("Book a table", `https://www.google.com/search?q=${encodeURIComponent(`${where} reservation`)}`));
+      return links;
+    }
+
+    function pickCard(p, showHood, type, destination) {
       const card = el("div", "card");
       card.append(el("h3", null, p.name));
       if (showHood && p.neighborhood) card.append(el("p", "pick-hood", p.neighborhood));
       else card.append(el("div", "pick-spacer"));
       card.append(el("p", "pick-reason", p.reason));
       if (p.basedOn) card.append(el("p", "pick-based", `Based on ${p.basedOn}`));
+      card.append(pickLinks(p, type, destination));
       card.append(el("span", "tag unverified", "unverified"));
       return card;
     }
@@ -410,15 +433,15 @@
       body.replaceChildren();
 
       const groups = [
-        ["where to stay", guide.neighborhoods, false],
-        ["where to eat", guide.eat, true],
-        ["where to drink", guide.drink, true],
+        ["where to stay", guide.neighborhoods, false, "stay"],
+        ["where to eat", guide.eat, true, "eat"],
+        ["where to drink", guide.drink, true, "drink"],
       ];
-      groups.forEach(([title, picks, showHood]) => {
+      groups.forEach(([title, picks, showHood, type]) => {
         const group = el("div", "guide-group");
         group.append(el("h3", null, title));
         const cards = el("div", "cards");
-        (picks || []).forEach((p) => cards.append(pickCard(p, showHood)));
+        (picks || []).forEach((p) => cards.append(pickCard(p, showHood, type, destination)));
         group.append(cards);
         body.append(group);
       });
