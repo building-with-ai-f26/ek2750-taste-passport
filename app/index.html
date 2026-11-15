@@ -96,6 +96,14 @@
       padding: 14px; margin-bottom: 12px; display: grid; gap: 8px;
     }
     .place-row input, .place-row textarea { background: #fff; }
+    .voice { display: flex; align-items: center; gap: 10px; }
+    .voice-btn {
+      border: 1px solid var(--line); background: transparent; color: var(--maroon); cursor: pointer;
+      border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 12px; letter-spacing: 0.04em;
+    }
+    .voice-btn:hover { border-color: var(--maroon); }
+    .voice-btn.listening { background: var(--cherry); border-color: var(--cherry); color: var(--cream); }
+    .voice-msg { font-size: 12px; color: var(--muted); }
 
     /* Cards */
     .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
@@ -273,7 +281,59 @@
       const note = el("textarea");
       note.placeholder = kind === "love" ? "What do you love about it?" : "What don't you like about it?";
       row.append(name, note);
+      const voice = voiceButton(note);
+      if (voice) row.append(voice);
       $(kind === "love" ? "loveList" : "dislikeList").append(row);
+    }
+
+    // ---------- Voice input ----------
+    // Uses the browser's built-in speech-to-text (Chrome, Safari, Edge). In browsers
+    // without it (e.g. Firefox) no button is shown and people just type.
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let activeRecognition = null; // only one note listens at a time
+
+    function voiceButton(textarea) {
+      if (!SpeechRecognition) return null;
+      const wrap = el("div", "voice");
+      const btn = el("button", "voice-btn", "● speak");
+      btn.type = "button";
+      const msg = el("span", "voice-msg");
+      wrap.append(btn, msg);
+
+      btn.addEventListener("click", () => {
+        if (activeRecognition && activeRecognition.textarea === textarea) return activeRecognition.stop();
+        if (activeRecognition) activeRecognition.stop();
+
+        const rec = new SpeechRecognition();
+        rec.lang = navigator.language || "en-US";
+        rec.continuous = true;
+        rec.interimResults = true; // show words as they're heard
+        rec.textarea = textarea;
+        const before = textarea.value.trim(); // keep anything already typed
+
+        rec.onresult = (event) => {
+          const spoken = [...event.results].map((r) => r[0].transcript).join("").trim();
+          textarea.value = [before, spoken].filter(Boolean).join(" ");
+          textarea.dispatchEvent(new Event("input", { bubbles: true }));
+        };
+        rec.onerror = (event) => {
+          msg.textContent = event.error === "not-allowed"
+            ? "Microphone is blocked. Allow it in your browser to use voice."
+            : "Couldn't hear that. Try again or type instead.";
+        };
+        rec.onend = () => {
+          btn.classList.remove("listening");
+          btn.textContent = "● speak";
+          if (activeRecognition === rec) activeRecognition = null;
+        };
+
+        msg.textContent = "";
+        btn.classList.add("listening");
+        btn.textContent = "■ stop";
+        activeRecognition = rec;
+        rec.start();
+      });
+      return wrap;
     }
 
     // Returns only the rows that have both a name and a note.
