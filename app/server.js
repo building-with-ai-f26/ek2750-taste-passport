@@ -162,11 +162,33 @@ async function handleTaste(body) {
 // if it is one of the pages the search actually returned, so the AI can't make one up.
 const BOOKING_SYSTEM = `Search the web once for this restaurant's online table booking page.
 Write the search query in the main language of the restaurant's city, including that language's word for reservation (e.g. "reservation" in London, "rezervasyon" in Istanbul, "reserva" in Madrid), so you find the restaurant's own pages rather than travel guides.
-Pick the result where people can actually book a table: a booking platform page for this exact restaurant (e.g. OpenTable, Resy, SevenRooms, Tock, TheFork) or the restaurant's own reservations page. If none of the results is a booking page, use the restaurant's own official website.
-Never pick review sites, guides, blogs or maps (e.g. Tripadvisor, Michelin Guide, Time Out, Yelp, Google).
-Reply with JSON only: {"url":"<the exact URL from the search results, or empty string>"}`;
+Return two links:
+- "booking": the result where people can actually book a table: a booking platform page for this exact restaurant (e.g. OpenTable, Resy, SevenRooms, Tock, TheFork) or the restaurant's own reservations page. It must be the exact URL of one of the search results. If none is a booking page, use "".
+- "website": the restaurant's own official website (its own domain, not a listing on another site). Use a search result if one is its website; otherwise give the official website only if you are confident of it; else "".
+Never use review sites, guides, blogs, maps or social media for either (e.g. Tripadvisor, Michelin Guide, Time Out, Yelp, Google, Instagram).
+Reply with JSON only: {"booking":"...","website":"..."}`;
 const NOT_BOOKING = ["tripadvisor.", "yelp.", "guide.michelin.", "timeout.com", "google.", "instagram.com", "facebook.com", "wikipedia.", "trip.com", "foursquare.", "zomato."];
 const trimSlash = (url) => url.replace(/\/+$/, "");
+
+// Lowercase without accents, so "Mürver" and "murver" match.
+const plain = (text) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i").toLowerCase();
+
+// Checks a website the AI suggested: it must be a public https page that loads
+// and mentions the restaurant's name. This stops made-up addresses.
+async function websiteLooksReal(url, name) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "https:" || /^(localhost|127\.|10\.|192\.168\.|169\.254\.)/.test(u.hostname)) return false;
+    const res = await fetch(u, { redirect: "follow", signal: AbortSignal.timeout(6000), headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!res.ok) return false;
+    const page = plain((await res.text()).slice(0, 300000));
+    const generic = ["restaurant", "restoran", "lokantasi", "cafe", "bar", "the", "and", "meyhane", "london", "istanbul"];
+    const words = plain(name).split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !generic.includes(w));
+    return words.length > 0 && words.some((w) => page.includes(w));
+  } catch {
+    return false;
+  }
+}
 
 async function handleBooking(body) {
   const { name, neighborhood, destination } = body;
@@ -188,16 +210,25 @@ async function handleBooking(body) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error?.message || `OpenRouter error ${res.status}`);
 
-  // The pages the search actually returned, and the one the AI picked.
+  // The pages the search actually returned, and the links the AI picked.
   const message = data.choices?.[0]?.message || {};
   const found = (message.annotations || []).map((a) => a.url_citation?.url).filter(Boolean).map(trimSlash);
-  let url = "";
+  let picked = {};
   const text = message.content || "";
-  try { url = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)).url || ""; } catch {}
+  try { picked = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)); } catch {}
+  const allowed = (url) => typeof url === "string" && url.startsWith("http") && !NOT_BOOKING.some((site) => url.includes(site));
 
-  const ok = url && found.includes(trimSlash(url)) && !NOT_BOOKING.some((site) => url.includes(site));
-  console.log(`  booking link for ${name}: ${ok ? url : "none found"} · $${data.usage?.cost ?? "?"}`);
-  return { url: ok ? url : null };
+  // Booking page: only if the search really returned it.
+  const booking = allowed(picked.booking) && found.includes(trimSlash(picked.booking)) ? picked.booking : null;
+  // Website: fine if the search returned it; otherwise open it and check it names the restaurant.
+  let website = null;
+  if (!booking && allowed(picked.website)) {
+    const inResults = found.includes(trimSlash(picked.website));
+    if (inResults || (await websiteLooksReal(picked.website, name))) website = picked.website;
+  }
+
+  console.log(`  links for ${name}: ${booking ? `booking ${booking}` : website ? `website ${website}` : "none found"} · $${data.usage?.cost ?? "?"}`);
+  return { url: booking, website };
 }
 
 // Splits one spoken sentence like "Carbone, I love the spicy rigatoni" into a name and a note.

@@ -510,11 +510,17 @@
       const note = el("span", "booking-note", "finding booking page…");
       link.after(note);
       try {
-        const { url } = await post("/api/booking", { name: p.name, neighborhood: p.neighborhood, destination });
+        const { url, website } = await post("/api/booking", { name: p.name, neighborhood: p.neighborhood, destination });
         if (url) {
+          // Real booking page found: link straight to it.
           link.href = url;
           link.textContent = "Book a table";
           note.textContent = `on ${new URL(url).hostname.replace(/^www\./, "")}`;
+          return;
+        }
+        if (website) {
+          // No booking page, but we have the restaurant's own site: add it next to the Google search.
+          note.replaceWith(linkTo("Website", website));
           return;
         }
       } catch {}
