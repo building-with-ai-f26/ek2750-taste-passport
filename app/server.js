@@ -44,7 +44,7 @@ async function askAI(system, user, { webSearch = false } = {}) {
         { role: "user", content: user },
       ],
       temperature: 0.4,
-      max_tokens: 6000, // a full guide uses about 3,000; this caps the cost of any single call
+      max_tokens: 12000, // a guide with web search uses about 5,000–8,000; this caps the cost of any single call
       usage: { include: true }, // asks OpenRouter to report the cost of this call
       ...(webSearch && { tools: [{ type: "openrouter:web_search", parameters: { max_uses: SEARCH_MAX } }] }),
     }),
@@ -54,6 +54,8 @@ async function askAI(system, user, { webSearch = false } = {}) {
 
   const cost = data.usage?.cost;
   console.log(`  ${MODEL}${webSearch ? " · web search on" : ""} · ${data.usage?.prompt_tokens} in / ${data.usage?.completion_tokens} out tokens · $${cost ?? "?"}`);
+
+  if (data.choices?.[0]?.finish_reason === "length") console.error("  reply was cut off because it hit max_tokens");
 
   // The model is told to reply with JSON only; grab the {...} part in case it adds extra text.
   const text = data.choices?.[0]?.message?.content || "";
@@ -107,8 +109,8 @@ You will get their home city, the places they love and dislike at home (what the
 
 Return:
 - 1 to 2 neighborhoods to stay in
-- 3 to 5 places to eat
-- 2 to 3 places to drink
+- 5 places to eat
+- 3 places to drink
 
 First, match neighborhoods: for each favorite, note which neighborhood of their home city it is in. Then name the neighborhood in the destination that plays the same role for the same crowd (the place where the same kind of people live, go out and spend time). Choose where to stay, and most of the picks, from these matching neighborhoods.
 
@@ -118,7 +120,7 @@ How to pick:
 - Neighborhoods to stay in: where that crowd spends its time in the destination, and where a visitor can actually stay.
 - Write the reason as one line naming the favorite and the specific reason, like "Because you love the counter seating at Place X." Only name places from their list. Never generic (e.g. "great food", "popular spot").
 - Never recommend anything that matches what they said in their dislikes.
-- Don't put more than half of the eat and drink picks in one neighborhood.
+- No single neighborhood should have more than 60% of the eat and drink picks.
 - "eat" is for places people mainly go to for a meal; "drink" is for bars and places people mainly go to for drinks.
 - Never list the same place twice.
 - Only recommend real places you are confident exist in the destination. Do not invent places.
@@ -163,6 +165,33 @@ async function handleSplit(body) {
   return { name: String(result.name || "").trim(), note: String(result.note || "").trim() };
 }
 
+const MAX_AREA_SHARE = 0.6; // no neighborhood should have more than 60% of the eat + drink picks
+const listOf = (list) => (Array.isArray(list) ? list : []);
+const pickCount = (guide) => listOf(guide.eat).length + listOf(guide.drink).length;
+
+// Returns a list of plain-English problems with a guide (empty list = good).
+function guideProblems(guide) {
+  const problems = [];
+  const eat = listOf(guide.eat).length;
+  const drink = listOf(guide.drink).length;
+  if (eat < 4 || drink < 2 || listOf(guide.neighborhoods).length < 1) {
+    problems.push(`It had ${eat} places to eat and ${drink} places to drink; return 5 places to eat and 3 places to drink.`);
+  }
+  // Count picks per area. "Kadıköy (Moda)" and "Kadıköy" count as the same area.
+  const areas = {};
+  for (const p of [...listOf(guide.eat), ...listOf(guide.drink)]) {
+    const area = String(p.neighborhood || "").split(/[(,]/)[0].trim();
+    if (area) areas[area] = (areas[area] || 0) + 1;
+  }
+  const total = pickCount(guide);
+  for (const [area, n] of Object.entries(areas)) {
+    if (total && n / total > MAX_AREA_SHARE) {
+      problems.push(`${n} of ${total} eat and drink picks are in ${area}; keep it to 60% or less by moving some to other neighborhoods that fit this person.`);
+    }
+  }
+  return problems;
+}
+
 async function handleGuide(body) {
   const { homeCity, places, destination, purpose } = body;
   if (!destination || !purpose) throw new Error("Add a destination and what the trip is for.");
@@ -180,17 +209,19 @@ async function handleGuide(body) {
 
   let guide = await askAIWithRetry(GUIDE_SYSTEM, user, { webSearch: WEB_SEARCH });
 
-  // If the guide came back too short, ask the AI once more and say exactly what was missing.
-  const count = (list) => (Array.isArray(list) ? list.length : 0);
-  if (count(guide.eat) < 3 || count(guide.drink) < 2 || count(guide.neighborhoods) < 1) {
-    console.log(`  guide too short (${count(guide.eat)} eat, ${count(guide.drink)} drink), asking again`);
+  // Check the guide against two product rules, and if either fails, ask the AI once more
+  // and say exactly what to fix: (1) enough picks, (2) no area has more than 60% of them.
+  let problems = guideProblems(guide);
+  if (problems.length) {
+    console.log(`  guide needs fixing (${problems.join(" ")}), asking again`);
     const retry = await askAIWithRetry(
       GUIDE_SYSTEM,
-      user + `\n\nYour last answer was too short: it had ${count(guide.eat)} places to eat and ${count(guide.drink)} places to drink. Return at least 3 places to eat and at least 2 places to drink.`,
+      user + `\n\nYour last answer had these problems: ${problems.join(" ")} Fix them and return the full guide again.`,
       { webSearch: WEB_SEARCH }
     );
-    // Keep whichever answer has more picks.
-    if (count(retry.eat) + count(retry.drink) > count(guide.eat) + count(guide.drink)) guide = retry;
+    // Keep the retry unless it's worse (more problems, or fewer picks with the same problems).
+    const retryProblems = guideProblems(retry);
+    if (retryProblems.length < problems.length || (retryProblems.length === problems.length && pickCount(retry) > pickCount(guide))) guide = retry;
   }
 
   // Enforce the size limits and mark every pick as unverified (we don't check places exist yet).
