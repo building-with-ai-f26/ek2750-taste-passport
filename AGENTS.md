@@ -14,9 +14,14 @@ Turns the places you love at home into a personalized travel guide for a new cit
 ```
 app/
   server.js        Node server (no packages). Serves the page and calls OpenRouter.
-                   POST /api/taste  → reads what you love/dislike about each place (+ the crowd)
-                   POST /api/guide  → makes the city guide (with web search)
-  index.html       The app's single page: places form → taste cards → trip → guide.
+                   POST /api/taste   → reads what you love/dislike about each place (+ the crowd)
+                   POST /api/guide   → makes the city guide (with web search), then checks it:
+                                       5 eat / 3 drink, no neighborhood over 60%, retries once if not
+                   POST /api/split   → voice input: splits "Carbone, I love the rigatoni" into name + note
+                   POST /api/booking → finds a restaurant's real booking page (one search per restaurant),
+                                       falls back to its own website; only uses links the search returned
+  index.html       The app's single page: places form (typed or spoken) → taste cards → trip → guide
+                   with Map / Book a table / Website / Find a hotel links.
 docs/
   index.html       Product Page on GitHub Pages: PRD, prototype screenshots, costs, build log.
   images/          Screenshots used on the Product Page.
@@ -42,8 +47,10 @@ Not used by the app: `Intent.md`, `Plan.md`, `journal/`, `SPONSOR_MEMO.md` (cour
 ## Settings (in .env)
 - `OPENROUTER_MODEL`: default `anthropic/claude-haiku-5.5`.
 - `WEB_SEARCH_MAX`: web searches per guide, default `1`. `WEB_SEARCH=off` turns search off.
-- Default is Haiku + 1 search, about $0.015 per user run (one taste reading + one guide).
-- Tested alternative: Sonnet + 1 search (`OPENROUTER_MODEL=anthropic/claude-sonnet-5.5`), about $0.11 per run, slightly better picks in some cities.
+- Default is Haiku + 1 search: about $0.018 for the taste reading + guide, plus about $0.028 for the
+  booking link searches (always Haiku, 5 restaurants), so about $0.05 per user run in total.
+- Tested alternative: Sonnet + 1 search (`OPENROUTER_MODEL=anthropic/claude-sonnet-5.5`), about $0.11 per run for the guide alone, slightly better picks in some cities.
+- Voice input needs Chrome, Safari or Edge (the browser does speech-to-text). The speak button doesn't appear in Firefox.
 
 ## Test with personas
 1. Start the app (above).
