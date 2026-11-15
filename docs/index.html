@@ -119,7 +119,7 @@
       <p class="eyebrow">NYU Stern · Building with AI · Fall 2026</p>
       <h1>Taste Passport</h1>
       <p class="tagline">Same taste, new city.</p>
-      <p class="meta">Esra Karamanci (ek2750) · PRD v1, November 8, 2026</p>
+      <p class="meta">Esra Karamanci (ek2750) · PRD v2, November 15, 2026 (v1: November 8)</p>
       <nav>
         <a href="#prd">PRD</a>
         <a href="#prototype">Prototype</a>
@@ -203,12 +203,55 @@
       <div class="callout">
         <p><strong>Riskiest assumption.</strong> A short note about a favorite place gives the app enough to understand why someone loves it, in a way that carries over to a different city. The first version is designed to test exactly that.</p>
       </div>
+
+      <h3>7. Biggest risk and how Build 2 tests it (PRD v2)</h3>
+      <p><strong>Biggest risk:</strong> the app understands my taste at home but can't carry it to a new city. If two very different people get similar guides, or the picks are generic, popular or touristy instead of personal, the product doesn't work.</p>
+      <p><strong>How this build tests it:</strong> I created three test personas who live in New York and have clearly different taste, each with 5 favorites and 2 dislikes with notes: Mara (alternative and artsy), Brooke (mainstream and trendy) and Sam (a budget foodie). Their tastes clash on purpose. Brooke dislikes two of Mara's favorites, and Sam dislikes two of Brooke's. A script sends all three through the real app for London and Istanbul, the two cities I know best, so I can judge every pick. I ran it after every change and compared the results side by side.</p>
+      <table>
+        <thead>
+          <tr><th>Version</th><th>What changed</th><th>What happened</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Baseline</td><td>Build 1 prompt: every pick tied to one favorite</td><td>The three guides were clearly different, so the app does tell people apart. But some guides were too short, some links were forced, and Istanbul picks clustered in one area.</td></tr>
+          <tr><td>v1 and v2</td><td>The AI first writes a general taste summary, plus rules like "central" and "not touristy"</td><td><strong>Worse.</strong> Summaries like "polished, buzzy" fit too many places, so Brooke's and Mara's Istanbul guides started to look alike. The AI also added things to Brooke's avoid list that she never said ("sceney"), which is the opposite of her taste.</td></tr>
+          <tr><td>v3 and v4</td><td>Back to matching specific places, plus the crowd at each favorite and matching home neighborhoods to the destination</td><td>Better and easier to debug. It showed that the AI's own map of Istanbul is missing areas like Bebek and Etiler, so no prompt could fix Brooke's guide.</td></tr>
+          <tr><td>v5</td><td>Web search added on top of the AI's own knowledge</td><td><strong>Best so far.</strong> More current, specific and local picks (e.g. Carbone London and Chiltern Firehouse for Brooke).</td></tr>
+        </tbody>
+      </table>
+      <p><strong>What I learned:</strong> taste carries over to a new city through specific places and the crowd that goes there, not through general adjectives. The notes do carry enough information, but only if the app keeps them concrete. The remaining gap is the AI's knowledge of each city, which web search partly fixes.</p>
+
+      <h3>8. How the app works</h3>
+      <ol>
+        <li><strong>The page</strong> (<code>app/index.html</code>) collects the home city, 5+ favorites and 2+ dislikes with a note on each, then the destination and what the trip is for.</li>
+        <li><strong>Taste reading:</strong> the page sends the places to my small Node server (<code>app/server.js</code>), which asks the AI, through OpenRouter, what the person loves or dislikes about each place and who the crowd there is. My API key stays on the server and never reaches the browser.</li>
+        <li><strong>Review:</strong> the page shows one card per place, and the user can edit or remove anything that's off.</li>
+        <li><strong>Guide:</strong> the server sends the reviewed taste, destination and trip purpose back to the AI. The AI first matches each favorite's home neighborhood to a neighborhood in the destination, can do one web search to check current places, and then picks 1–2 neighborhoods to stay in, 3–5 places to eat and 2–3 places to drink. Each pick is tied to a favorite and the reason why.</li>
+        <li><strong>Safety nets:</strong> if a guide comes back too short or broken, the server automatically asks again. Every AI call prints its token count and cost in the terminal.</li>
+        <li><strong>Analytics:</strong> PostHog records pageviews, clicks and session replays on this page and in the app. Text people type is hidden in replays.</li>
+      </ol>
+
+      <h3>9. Cost per user run</h3>
+      <p>One user run is one taste reading plus one guide. I compared models and web search on the same three personas:</p>
+      <table>
+        <thead>
+          <tr><th>Setup</th><th>Cost per run</th><th>100 users</th><th>Picks</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Claude Haiku 5.5, no search</td><td>~$0.002</td><td>~$0.20</td><td>Generic, more tourist spots</td></tr>
+          <tr><td><strong>Claude Haiku 5.5 + 1 web search (current)</strong></td><td><strong>~$0.015</strong></td><td><strong>~$1.50</strong></td><td><strong>Best value, my preferred results</strong></td></tr>
+          <tr><td>Claude Haiku 5.5 + 2 web searches</td><td>~$0.03</td><td>~$3</td><td>Not clearly better than 1 search</td></tr>
+          <tr><td>Claude Sonnet 5.5, no search</td><td>~$0.03–0.04</td><td>~$3.50</td><td>More specific than Haiku</td></tr>
+          <tr><td>Claude Sonnet 5.5 + 1 web search</td><td>~$0.11</td><td>~$11</td><td>Slightly better in some cities (Istanbul), about 7 times the cost</td></tr>
+          <tr><td>Claude Sonnet 5.5 + 3 web searches</td><td>~$0.18–0.35</td><td>~$27</td><td>Good, but too expensive</td></tr>
+        </tbody>
+      </table>
+      <p>I'm using Haiku + 1 web search for now and keeping Sonnet + 1 search as an option if picks need to improve later. Trying a second city costs about $0.015 more on the current setup.</p>
     </section>
 
     <!-- PROTOTYPE -->
     <section id="prototype">
       <h2>Prototype</h2>
-      <p><strong>Status:</strong> Build 1 local prototype. Runs on my laptop with Claude Haiku 5.5 through OpenRouter.</p>
+      <p><strong>Status:</strong> Build 2 local version. Runs on my laptop with Claude Haiku 5.5 and one web search through OpenRouter, with PostHog analytics.</p>
       <p>The first slice of the core workflow works end to end: add 5+ favorite and 2+ disliked places with a note on each, review and edit what the AI thinks I love or dislike about each one, enter a destination and trip purpose, and get a guide with 1–2 neighborhoods, 3–5 places to eat and 2–3 places to drink. Every pick is tied to a specific favorite and marked unverified.</p>
       <figure>
         <img src="images/flow-1-places.jpg" alt="Step one: home city set to New York, five favorite places and two disliked places, each with a short note." />
@@ -234,15 +277,15 @@
       <div class="grid-2">
         <div class="stat-box">
           <div class="stat-label">Cumulative Build Spend</div>
-          <div class="stat-value">About $0.01 OpenRouter + Claude Pro</div>
+          <div class="stat-value">About $3.14 OpenRouter + Claude Pro</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Est. Cost Per User Run</div>
-          <div class="stat-value">About $0.002</div>
+          <div class="stat-value">About $0.015 (Haiku + 1 web search)</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">User Evidence (Analytics from Build 2)</div>
-          <div class="stat-value">[Not yet measured]</div>
+          <div class="stat-value">PostHog live on this page and the app: pageviews, clicks and session replays verified</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Sponsor Call (Week 6)</div>
@@ -281,9 +324,13 @@
       <div class="log-entry">
         <h3>Build 2 · Smallest Local Version & PostHog (Due Nov 16)</h3>
         <ul>
-          <li><strong>What shipped:</strong> [Local working slice, PostHog verified on this page and the local app, PRD v2, and local setup in AGENTS.md]</li>
-          <li><strong>What broke / changed in PRD:</strong> [Fill in]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
+          <li><strong>What shipped:</strong> PostHog on this page and in the local app, with pageviews, clicks and session replays verified. Three test personas and a script that runs them through the real app for London and Istanbul, with a results file for every version. A rebuilt guide step: picks are matched to specific favorites, the crowd that goes there and the matching neighborhood in the destination, with one web search to find current places. Automatic retries when a guide comes back too short or broken. PRD v2 above, and setup and run instructions in AGENTS.md.</li>
+          <li><strong>Things learned with AI:</strong> I learned how to test an AI product with personas: run the same people through every version so the only thing that changes is the prompt or model, then judge the results myself. I learned that more instructions can make an AI worse. My general rules like "central" and "not touristy" overrode each person's own taste. I learned that example words in a prompt can be copied straight into the output, and that each model has gaps in what it knows about a city. I also learned how API pricing works: tokens in and out, why search results make calls more expensive, and how to compare cost per user run across models.</li>
+          <li><strong>What broke:</strong> My first prompt fix made the guides worse. Picks got generic and two very different personas got similar Istanbul guides. My OpenRouter key hit its spending limit mid-test. A guide got cut off because it hit the reply length cap. With web search on, the AI sometimes returned broken JSON, so the app now repairs it automatically instead of showing an error.</li>
+          <li><strong>What changed in the PRD:</strong> Added sections 7–9: the biggest risk and how the persona tests checked it, how the app works, and cost per user run across six model setups. The core workflow is the same. The guide now explains picks through the crowd and neighborhood, and I removed the taste summary card I had briefly added.</li>
+          <li><strong>What I learned from testing:</strong> Taste does carry over to a new city, but only when the app works from specific places and who goes there, not from general adjectives. London picks are strong for all three personas. Istanbul is harder: even the best setup puts my trendy persona in Nişantaşı and Beyoğlu, not Bebek or Etiler where I'd expect her. Web search helped more than switching to a bigger model, and Haiku + 1 search gave my favorite results at about $0.015 per run.</li>
+          <li><strong>What's next:</strong> Test with real people from my tester group in cities they know. Keep improving neighborhood choice in harder cities. Add a way to edit the guide and check that places exist, and add PostHog events for each step of the workflow.</li>
+          <li><strong>Cost & time this week:</strong> About $3.13 on OpenRouter, almost all of it model and web search comparisons. One user run costs about $0.015 · [X] hours</li>
         </ul>
       </div>
 
