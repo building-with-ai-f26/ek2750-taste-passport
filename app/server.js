@@ -1,10 +1,11 @@
 // Taste Passport — local prototype server.
 // Run with: node --env-file=.env app/server.js   then open http://localhost:3000
 //
-// This file does three things:
+// This file does four things:
 //   1. Serves the web page (app/index.html).
 //   2. POST /api/taste  — asks the AI what you love/dislike about each place.
 //   3. POST /api/guide  — asks the AI for a city guide based on your taste.
+//   4. POST /api/split  — splits a spoken sentence into a place name and a note.
 // Your OpenRouter key is only used here, never sent to the browser.
 
 const http = require("http");
@@ -130,6 +131,14 @@ How to pick:
  "eat":[{"name":"...","neighborhood":"...","reason":"...","basedOn":"<favorite place name>"}],
  "drink":[{"name":"...","neighborhood":"...","reason":"...","basedOn":"<favorite place name>"}]}`;
 
+const SPLIT_SYSTEM = `Someone spoke a short description of one place (a restaurant, bar, cafe, hotel or shop) in their home city, and speech-to-text turned it into text.
+Split it into the place's name and their note about it.
+
+Rules:
+- "name": just the place's name. Speech-to-text often misspells names; if it clearly sounds like a well-known place in their home city, use that place's correct spelling (e.g. "bemelman's bar" → "Bemelmans Bar", "she on famous foods" → "Xi'an Famous Foods"). If you're not sure, keep what they said. If they didn't say a name, use "".
+- "note": everything else they said about the place, in their own words. Only remove filler like "um", "so", "I'd say" and the name itself. Don't add, summarize or rewrite anything.
+- Reply with JSON only, no other text: {"name":"...","note":"..."}`;
+
 // ---------- Request handlers ----------
 
 async function handleTaste(body) {
@@ -142,6 +151,16 @@ async function handleTaste(body) {
     `Home city: ${homeCity || "not given"}\n\n` +
     places.map((p) => `- [${p.kind}] ${p.name}: ${p.note}`).join("\n");
   return askAI(TASTE_SYSTEM, user);
+}
+
+// Splits one spoken sentence like "Carbone, I love the spicy rigatoni" into a name and a note.
+async function handleSplit(body) {
+  const text = (body.text || "").trim();
+  if (!text) throw new Error("Nothing was heard. Try again.");
+  if (text.length > 2000) throw new Error("That was too long. Try one place at a time.");
+  const user = `Home city: ${body.homeCity || "not given"}\nThis is a place they ${body.kind === "dislike" ? "dislike" : "love"}.\nWhat they said: ${text}`;
+  const result = await askAI(SPLIT_SYSTEM, user);
+  return { name: String(result.name || "").trim(), note: String(result.note || "").trim() };
 }
 
 async function handleGuide(body) {
@@ -204,7 +223,7 @@ function sendJSON(res, status, obj) {
   res.end(JSON.stringify(obj));
 }
 
-const routes = { "/api/taste": handleTaste, "/api/guide": handleGuide };
+const routes = { "/api/taste": handleTaste, "/api/guide": handleGuide, "/api/split": handleSplit };
 
 http
   .createServer(async (req, res) => {

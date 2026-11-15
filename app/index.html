@@ -281,7 +281,7 @@
       const note = el("textarea");
       note.placeholder = kind === "love" ? "What do you love about it?" : "What don't you like about it?";
       row.append(name, note);
-      const voice = voiceButton(note);
+      const voice = voiceButton(name, note, kind);
       if (voice) row.append(voice);
       $(kind === "love" ? "loveList" : "dislikeList").append(row);
     }
@@ -292,12 +292,15 @@
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let activeRecognition = null; // only one note listens at a time
 
-    function voiceButton(textarea) {
+    // One button per row: say the place and what you think of it, e.g.
+    // "Carbone, I love the spicy rigatoni". Words show up live in the note box;
+    // when you stop, the server splits them into the place name and the note.
+    function voiceButton(nameInput, textarea, kind) {
       if (!SpeechRecognition) return null;
       const wrap = el("div", "voice");
       const btn = el("button", "voice-btn", "● speak");
       btn.type = "button";
-      const msg = el("span", "voice-msg");
+      const msg = el("span", "voice-msg", "Say the place's name, then what you think of it.");
       wrap.append(btn, msg);
 
       btn.addEventListener("click", () => {
@@ -309,25 +312,45 @@
         rec.continuous = true;
         rec.interimResults = true; // show words as they're heard
         rec.textarea = textarea;
-        const before = textarea.value.trim(); // keep anything already typed
+        const noteBefore = textarea.value.trim(); // keep anything already typed
+        let spoken = "";
+        let failed = false;
 
         rec.onresult = (event) => {
-          const spoken = [...event.results].map((r) => r[0].transcript).join("").trim();
-          textarea.value = [before, spoken].filter(Boolean).join(" ");
+          spoken = [...event.results].map((r) => r[0].transcript).join("").trim();
+          textarea.value = [noteBefore, spoken].filter(Boolean).join(" ");
           textarea.dispatchEvent(new Event("input", { bubbles: true }));
         };
         rec.onerror = (event) => {
+          failed = true;
           msg.textContent = event.error === "not-allowed"
             ? "Microphone is blocked. Allow it in your browser to use voice."
             : "Couldn't hear that. Try again or type instead.";
         };
-        rec.onend = () => {
+        rec.onend = async () => {
           btn.classList.remove("listening");
           btn.textContent = "● speak";
           if (activeRecognition === rec) activeRecognition = null;
+          if (failed || !spoken) return;
+
+          // Ask the server to pull the place name out of what was said.
+          btn.disabled = true;
+          msg.textContent = "Sorting out the name and note…";
+          try {
+            const result = await post("/api/split", { text: spoken, kind, homeCity: $("homeCity").value.trim() });
+            if (result.name && !nameInput.value.trim()) nameInput.value = result.name;
+            textarea.value = [noteBefore, result.note].filter(Boolean).join(" ");
+            msg.textContent = result.name ? "Check the name and note, and fix anything that's off." : "Didn't catch a place name. Type it in above.";
+          } catch {
+            msg.textContent = "Couldn't sort that out. Your words are in the note; add the name above.";
+          } finally {
+            btn.disabled = false;
+            nameInput.dispatchEvent(new Event("input", { bubbles: true }));
+            textarea.dispatchEvent(new Event("input", { bubbles: true }));
+          }
         };
 
-        msg.textContent = "";
+        msg.textContent = "Listening… click stop when you're done.";
         btn.classList.add("listening");
         btn.textContent = "■ stop";
         activeRecognition = rec;
