@@ -121,6 +121,7 @@
     .tag.unverified { color: var(--muted); margin: 14px 0 0; }
     .pick-links { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0 0; font-size: 13px; }
     .pick-links a { color: var(--cherry); font-weight: 500; text-underline-offset: 3px; }
+    .booking-note { color: var(--muted); }
 
     /* Taste editor */
     .trait { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
@@ -494,8 +495,30 @@
       const links = el("p", "pick-links");
       links.append(linkTo("Map", `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(where)}`));
       if (type === "stay") links.append(linkTo("Find a hotel", `https://www.google.com/travel/search?q=${encodeURIComponent(`hotels in ${p.name}, ${destination}`)}`));
-      if (type === "eat") links.append(linkTo("Book a table", `https://www.google.com/search?q=${encodeURIComponent(`${where} reservation`)}`));
+      if (type === "eat") {
+        // Starts as a Google search; upgradeBooking swaps in the real booking page if one is found.
+        const book = linkTo("Find a table", `https://www.google.com/search?q=${encodeURIComponent(`${where} reservation`)}`);
+        book.classList.add("book-link");
+        links.append(book);
+        upgradeBooking(book, p, destination);
+      }
       return links;
+    }
+
+    // Looks for the restaurant's real booking page in the background, so the guide shows right away.
+    async function upgradeBooking(link, p, destination) {
+      const note = el("span", "booking-note", "finding booking page…");
+      link.after(note);
+      try {
+        const { url } = await post("/api/booking", { name: p.name, neighborhood: p.neighborhood, destination });
+        if (url) {
+          link.href = url;
+          link.textContent = "Book a table";
+          note.textContent = `on ${new URL(url).hostname.replace(/^www\./, "")}`;
+          return;
+        }
+      } catch {}
+      note.remove(); // nothing found: keep the Google search link
     }
 
     function pickCard(p, showHood, type, destination) {

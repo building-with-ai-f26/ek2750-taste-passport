@@ -1,11 +1,12 @@
 // Taste Passport — local prototype server.
 // Run with: node --env-file=.env app/server.js   then open http://localhost:3000
 //
-// This file does four things:
+// This file does five things:
 //   1. Serves the web page (app/index.html).
-//   2. POST /api/taste  — asks the AI what you love/dislike about each place.
-//   3. POST /api/guide  — asks the AI for a city guide based on your taste.
-//   4. POST /api/split  — splits a spoken sentence into a place name and a note.
+//   2. POST /api/taste   — asks the AI what you love/dislike about each place.
+//   3. POST /api/guide   — asks the AI for a city guide based on your taste.
+//   4. POST /api/split   — splits a spoken sentence into a place name and a note.
+//   5. POST /api/booking — finds a restaurant's real table booking page with one web search.
 // Your OpenRouter key is only used here, never sent to the browser.
 
 const http = require("http");
@@ -155,6 +156,50 @@ async function handleTaste(body) {
   return askAI(TASTE_SYSTEM, user);
 }
 
+// ---------- Booking links ----------
+// For one restaurant, does a single web search and picks the page where people can book a table
+// (e.g. OpenTable, Resy, SevenRooms, or the restaurant's own booking page). The link is only used
+// if it is one of the pages the search actually returned, so the AI can't make one up.
+const BOOKING_SYSTEM = `Search the web once for this restaurant's online table booking page.
+Write the search query in the main language of the restaurant's city, including that language's word for reservation (e.g. "reservation" in London, "rezervasyon" in Istanbul, "reserva" in Madrid), so you find the restaurant's own pages rather than travel guides.
+Pick the result where people can actually book a table: a booking platform page for this exact restaurant (e.g. OpenTable, Resy, SevenRooms, Tock, TheFork) or the restaurant's own reservations page. If none of the results is a booking page, use the restaurant's own official website.
+Never pick review sites, guides, blogs or maps (e.g. Tripadvisor, Michelin Guide, Time Out, Yelp, Google).
+Reply with JSON only: {"url":"<the exact URL from the search results, or empty string>"}`;
+const NOT_BOOKING = ["tripadvisor.", "yelp.", "guide.michelin.", "timeout.com", "google.", "instagram.com", "facebook.com", "wikipedia.", "trip.com", "foursquare.", "zomato."];
+const trimSlash = (url) => url.replace(/\/+$/, "");
+
+async function handleBooking(body) {
+  const { name, neighborhood, destination } = body;
+  if (!name || !destination) throw new Error("Missing restaurant or city.");
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json", "X-Title": "Taste Passport (local prototype)" },
+    body: JSON.stringify({
+      model: "anthropic/claude-haiku-5.5", // always the cheap model: this is a simple pick-from-a-list job
+      max_tokens: 500,
+      usage: { include: true },
+      messages: [
+        { role: "system", content: BOOKING_SYSTEM },
+        { role: "user", content: [name, neighborhood, destination].filter(Boolean).join(", ") },
+      ],
+      tools: [{ type: "openrouter:web_search", parameters: { engine: "perplexity", max_uses: 1, max_results: 5 } }],
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || `OpenRouter error ${res.status}`);
+
+  // The pages the search actually returned, and the one the AI picked.
+  const message = data.choices?.[0]?.message || {};
+  const found = (message.annotations || []).map((a) => a.url_citation?.url).filter(Boolean).map(trimSlash);
+  let url = "";
+  const text = message.content || "";
+  try { url = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)).url || ""; } catch {}
+
+  const ok = url && found.includes(trimSlash(url)) && !NOT_BOOKING.some((site) => url.includes(site));
+  console.log(`  booking link for ${name}: ${ok ? url : "none found"} · $${data.usage?.cost ?? "?"}`);
+  return { url: ok ? url : null };
+}
+
 // Splits one spoken sentence like "Carbone, I love the spicy rigatoni" into a name and a note.
 async function handleSplit(body) {
   const text = (body.text || "").trim();
@@ -254,7 +299,7 @@ function sendJSON(res, status, obj) {
   res.end(JSON.stringify(obj));
 }
 
-const routes = { "/api/taste": handleTaste, "/api/guide": handleGuide, "/api/split": handleSplit };
+const routes = { "/api/taste": handleTaste, "/api/guide": handleGuide, "/api/split": handleSplit, "/api/booking": handleBooking };
 
 http
   .createServer(async (req, res) => {
