@@ -169,11 +169,11 @@
 
       <h3>4. Core workflow</h3>
       <ol>
-        <li><strong>Add favorites and dislikes.</strong> Enter at least 5 places I love in my home city and at least 2 I don't, with a short note on each. There's no upper limit, adding more improves the results, and my profile is saved for future trips.</li>
+        <li><strong>Add favorites and dislikes.</strong> Enter at least 5 places I love in my home city and at least 2 I don't, with a short note on each. I can type, or tap "speak" and just say the place and what I think of it, and the app fills in the name and note for me. There's no upper limit, adding more improves the results, and my profile is saved for future trips.</li>
         <li><strong>Review my taste.</strong> The app shows what it thinks I love or dislike about each place (e.g. "counter seating," "special without being expensive," "too loud"), and I can edit or remove anything that's off.</li>
         <li><strong>Describe the trip.</strong> Enter the destination and what the trip is for, so the picks fit the occasion (e.g. a romantic weekend, a work trip, a trip with my parents).</li>
         <li><strong>Invite travel companions (optional).</strong> Share a link so friends can add their own favorites, dislikes and budget, with no account needed.</li>
-        <li><strong>Get the guide.</strong> See the best neighborhood to stay in, plus where to eat, drink, shop and explore. Each pick is checked to make sure it exists and is open, and is tied to something someone on the trip loves. Anyone on the trip can edit the guide by removing a pick, with an optional reason so the app suggests a replacement, or by adding a place of their own.</li>
+        <li><strong>Get the guide.</strong> See the best neighborhood to stay in, plus where to eat, drink, shop and explore. Each pick is checked to make sure it exists and is open, and is tied to something someone on the trip loves. Every pick links to Google Maps, neighborhoods link to hotels, and restaurants link straight to their booking page when there is one (otherwise their website or a search). Anyone on the trip can edit the guide by removing a pick, with an optional reason so the app suggests a replacement, or by adding a place of their own.</li>
       </ol>
 
       <h3>5. Three non-goals</h3>
@@ -206,19 +206,28 @@
 
       <h3>7. Biggest risk and how Build 2 tests it (PRD v2)</h3>
       <p><strong>Biggest risk:</strong> the app understands my taste at home but can't carry it to a new city. If two very different people get similar guides, or the picks are generic, popular or touristy instead of personal, the product doesn't work.</p>
-      <p><strong>How this build tests it:</strong> I created three test personas who live in New York and have clearly different taste, each with 5 favorites and 2 dislikes with notes: Mara (alternative and artsy), Brooke (mainstream and trendy) and Sam (a budget foodie). Their tastes clash on purpose. Brooke dislikes two of Mara's favorites, and Sam dislikes two of Brooke's. A script sends all three through the real app for London and Istanbul, the two cities I know best, so I can judge every pick. I ran it after every change and compared the results side by side.</p>
+      <p><strong>How this build tests it:</strong> I created three test personas who live in New York and have clearly different taste, each with 5 favorites and 2 dislikes with notes: Mara (alternative and artsy), Brooke (mainstream and trendy) and Sam (a budget foodie). Their tastes clash on purpose. Brooke dislikes two of Mara's favorites, and Sam dislikes two of Brooke's. A script sends all three through the real app for London and Istanbul, the two cities I know best, so I can judge every pick. I ran it after every change and compared the results side by side. The first row is where Build 1 left off; every row after it is a version I made during Build 2.</p>
       <table>
         <thead>
           <tr><th>Version</th><th>What changed</th><th>What happened</th></tr>
         </thead>
         <tbody>
-          <tr><td>Baseline</td><td>Build 1 prompt: every pick tied to one favorite</td><td>The three guides were clearly different, so the app does tell people apart. But some guides were too short, some links were forced, and Istanbul picks clustered in one area.</td></tr>
-          <tr><td>v1 and v2</td><td>The AI first writes a general taste summary, plus rules like "central" and "not touristy"</td><td><strong>Worse.</strong> Summaries like "polished, buzzy" fit too many places, so Brooke's and Mara's Istanbul guides started to look alike. The AI also added things to Brooke's avoid list that she never said ("sceney"), which is the opposite of her taste.</td></tr>
-          <tr><td>v3 and v4</td><td>Back to matching specific places, plus the crowd at each favorite and matching home neighborhoods to the destination</td><td>Better and easier to debug. It showed that the AI's own map of Istanbul is missing areas like Bebek and Etiler, so no prompt could fix Brooke's guide.</td></tr>
-          <tr><td>v5</td><td>Web search added on top of the AI's own knowledge</td><td><strong>Best so far.</strong> More current, specific and local picks (e.g. Carbone London and Chiltern Firehouse for Brooke).</td></tr>
+          <tr><td><strong>Build 1</strong> (starting point)</td><td>Every pick tied to one favorite</td><td>The three guides were clearly different, so the app does tell people apart. But some guides were too short, some links were forced, and Istanbul picks clustered in one area.</td></tr>
+          <tr><td><strong>Build 2 · v1–v2</strong></td><td>The AI first writes a general taste summary and picks from that, plus rules like "central" and "not touristy"</td><td><strong>Worse.</strong> Summaries like "polished, buzzy" fit too many places, so Brooke's and Mara's Istanbul guides started to look alike. The AI also added things to Brooke's avoid list that she never said ("sceney"), which is the opposite of her taste.</td></tr>
+          <tr><td><strong>Build 2 · v3–v4</strong></td><td>Back to matching specific places, plus the crowd at each favorite and matching home neighborhoods to the destination</td><td>Better and easier to debug. It showed that the AI's own map of Istanbul is missing areas like Bebek and Etiler, so no prompt could fix Brooke's guide.</td></tr>
+          <tr><td><strong>Build 2 · v5</strong></td><td>Web search added on top of the AI's own knowledge; compared Haiku and Sonnet with 1–3 searches</td><td>More current, specific and local picks (e.g. Carbone London and Chiltern Firehouse for Brooke). Haiku + 1 search gave my favorite results.</td></tr>
+          <tr><td><strong>Build 2 · v6</strong> (current)</td><td>Always 5 places to eat and 3 to drink, and the server checks that no neighborhood has more than 60% of the picks</td><td>Every guide came back full, and no persona's guide was crowded into one area.</td></tr>
         </tbody>
       </table>
       <p><strong>What I learned:</strong> taste carries over to a new city through specific places and the crowd that goes there, not through general adjectives. The notes do carry enough information, but only if the app keeps them concrete. The remaining gap is the AI's knowledge of each city, which web search partly fixes.</p>
+      <p><strong>Tradeoffs I made along the way:</strong></p>
+      <ul>
+        <li><strong>Specific over general.</strong> A taste summary sounded like a smart first step, but every summary throws away detail, and picking from a summary of a summary made guides generic. I went back to matching each pick to a specific favorite, even though it's less "big picture."</li>
+        <li><strong>The person's taste over my rules.</strong> I removed general rules like "central" and "not touristy" because they overrode what each person actually likes. The one rule I kept, no more than 60% of picks in one area, is checked after the guide is made instead of being written into the instructions, so it can't steer anyone's taste.</li>
+        <li><strong>Cost over a small quality gain.</strong> Sonnet with search was slightly better in some cities but cost about 7 times more, and 2 searches weren't clearly better than 1. I chose Haiku + 1 search and kept Sonnet as an option.</li>
+        <li><strong>Real booking links over a cheaper run.</strong> Finding each restaurant's booking page is now more than half of the cost of a run, but linking straight to booking is much more useful than a Google search, so I kept it.</li>
+        <li><strong>More picks over only the strongest ones.</strong> Asking for 5 places to eat instead of 3 may make the last picks a little weaker, but a guide with 3 places felt too thin.</li>
+      </ul>
 
       <h3>8. How the app works</h3>
       <ol>
@@ -233,7 +242,23 @@
       </ol>
 
       <h3>9. Cost per user run</h3>
-      <p>One user run is one taste reading plus one guide. First I compared models and web search on the same three personas (taste reading + guide only):</p>
+      <div class="callout">
+        <p><strong>About $0.05 per user run</strong> (about $5 per 100 users) on the current setup, Claude Haiku 5.5 with one web search. One run is one person going from their places to a finished guide:</p>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Step</th><th>Cost</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Voice input, if used (splitting what you say into name and note)</td><td>~$0.001</td></tr>
+          <tr><td>Taste reading</td><td>~$0.001</td></tr>
+          <tr><td>Guide (5 places to eat, 3 to drink, one web search)</td><td>~$0.017</td></tr>
+          <tr><td>Booking link searches (one per place to eat)</td><td>~$0.028</td></tr>
+          <tr><td><strong>Total</strong></td><td><strong>~$0.05</strong></td></tr>
+        </tbody>
+      </table>
+      <p>The booking links are more than half the cost, so they're the first place to save money later (e.g. remembering links for restaurants that come up often).</p>
+      <p><strong>How I chose this setup:</strong> I ran the same three personas through six combinations of model and web search and compared the picks and the cost of the taste reading + guide:</p>
       <table>
         <thead>
           <tr><th>Setup</th><th>Cost per run</th><th>100 users</th><th>Picks</th></tr>
@@ -247,8 +272,7 @@
           <tr><td>Claude Sonnet 5.5 + 3 web searches</td><td>~$0.18–0.35</td><td>~$27</td><td>Good, but too expensive</td></tr>
         </tbody>
       </table>
-      <p>I'm using Haiku + 1 web search for now and keeping Sonnet + 1 search as an option if picks need to improve later.</p>
-      <p><strong>Full cost of one run today:</strong> taste reading (~$0.001) + guide with 5 places to eat and 3 to drink (~$0.017) + booking link searches for the 5 places to eat (~$0.028) + voice input if used (~$0.001) = <strong>about $0.05 per run</strong>, or about $5 per 100 users. The booking links are now more than half the cost, so they're the first place to save money later (e.g. remembering links for restaurants that come up often).</p>
+      <p>Haiku + 1 web search gave the picks I liked most for a fraction of the cost, so it's the default. Sonnet + 1 search stays as an option if picks need to improve later, and switching is one setting.</p>
     </section>
 
     <!-- PROTOTYPE -->
@@ -328,13 +352,58 @@
       <div class="log-entry">
         <h3>Build 2 · Smallest Local Version & PostHog (Due Nov 16)</h3>
         <ul>
-          <li><strong>What shipped:</strong> PostHog on this page and in the local app, with pageviews, clicks and session replays verified. Three test personas and a script that runs them through the real app for London and Istanbul, with a results file for every version. A rebuilt guide step: picks are matched to specific favorites, the crowd that goes there and the matching neighborhood in the destination, with one web search to find current places. Automatic retries when a guide comes back too short or broken. Two ideas from my pod: voice input (say a place and what you think of it, and the app fills in the name and note) and booking links (Google Maps for every pick, Google Hotels for neighborhoods, and a real booking page or the restaurant's website for places to eat). Guides now always have 5 places to eat and 3 to drink, and no neighborhood can have more than 60% of the picks. PRD v2 above, new screenshots from a real run with a friend's favorites, and setup and run instructions in AGENTS.md.</li>
-          <li><strong>Things learned with AI:</strong> I learned how to test an AI product with personas: run the same people through every version so the only thing that changes is the prompt or model, then judge the results myself. I learned that more instructions can make an AI worse. My general rules like "central" and "not touristy" overrode each person's own taste. I learned that example words in a prompt can be copied straight into the output, and that each model has gaps in what it knows about a city. I also learned how API pricing works: tokens in and out, why search results make calls more expensive, and how to compare cost per user run across models.</li>
-          <li><strong>What broke:</strong> My first prompt fix made the guides worse. Picks got generic and two very different personas got similar Istanbul guides. My OpenRouter key hit its spending limit mid-test. With web search on, the AI sometimes returned broken replies the app couldn't read. The real cause turned out to be my reply length cap: guides with search were longer than the cap and got cut off mid-reply. I raised the cap, and the app now repairs a broken reply automatically instead of showing an error. My first version of voice input only filled in the note, not the place's name, so I added a step that splits what you say into both. Booking pages were easy to find for London restaurants but not for Istanbul, where many places only take bookings by phone or Instagram, so the app falls back to the restaurant's website or a Google search.</li>
-          <li><strong>What changed in the PRD:</strong> Added sections 7–9: the biggest risk and how the persona tests checked it, how the app works, and cost per user run across six model setups. The core workflow is the same. The guide now explains picks through the crowd and neighborhood, and I removed the taste summary card I had briefly added.</li>
-          <li><strong>What I learned from testing:</strong> Taste does carry over to a new city, but only when the app works from specific places and who goes there, not from general adjectives. London picks are strong for all three personas. Istanbul is harder: even the best setup puts my trendy persona in Nişantaşı and Beyoğlu, not Bebek or Etiler where I'd expect her. Web search helped more than switching to a bigger model, and Haiku + 1 search gave my favorite results at about $0.015 per run.</li>
-          <li><strong>What's next:</strong> Test with real people from my tester group in cities they know. Keep improving neighborhood choice in harder cities. Add a way to edit the guide and check that places exist, and add PostHog events for each step of the workflow.</li>
-          <li><strong>Cost & time this week:</strong> About $3.61 on OpenRouter, almost all of it model and web search comparisons. One user run now costs about $0.05, more than half of it the booking link searches · [X] hours</li>
+          <li><strong>What shipped:</strong>
+            <ul>
+              <li><em>New:</em>
+                <ul>
+                  <li>PostHog on this page and in the local app, with pageviews, clicks and session replays verified.</li>
+                  <li>Voice input, an idea from my pod: tap "speak," say the place and what you think of it, and the app fills in the name and the note.</li>
+                  <li>Booking links, also from my pod: Google Maps for every pick, Google Hotels for neighborhoods, and for restaurants a link straight to their booking page, or their website if there isn't one.</li>
+                  <li>Three test personas and a script that runs them through the real app for London and Istanbul, with a results file for every version.</li>
+                  <li>PRD v2 above, new screenshots from a real run with my friend Danielle's favorites, and setup and run instructions in AGENTS.md.</li>
+                </ul>
+              </li>
+              <li><em>Changed:</em>
+                <ul>
+                  <li>The guide matches each pick to a specific favorite, the crowd that goes there and the matching neighborhood in the destination.</li>
+                  <li>The guide uses one web search to find current places, on Claude Haiku 5.5.</li>
+                  <li>Guides always have 5 places to eat and 3 to drink, and no neighborhood can have more than 60% of the picks.</li>
+                  <li>The app retries automatically when a guide comes back too short, too crowded in one area, or broken.</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li><strong>Things learned with AI:</strong>
+            <ul>
+              <li><em>Testing with personas:</em> run the same people through every version, so the only thing that changes is the prompt or model, and judge the results myself.</li>
+              <li><em>More instructions can make an AI worse:</em> my first fix had the AI summarize each person's taste first and then pick places from that summary. My notes became short traits, the traits became a few adjectives ("polished, buzzy"), and the picks came from the adjectives. Each step lost detail, like a game of telephone, so very different people ended up with similar guides. Adding rules like "central" and "not touristy" made it worse, because they overrode what each person actually likes.</li>
+              <li><em>Example words get copied:</em> words I used as examples in the instructions ("sceney") ended up in a persona's profile even though she never said them.</li>
+              <li><em>Each model has gaps:</em> the AI's knowledge of a city can be incomplete no matter how good the instructions are. Web search helped more than a bigger model.</li>
+              <li><em>Tradeoffs:</em> almost every improvement had a cost: better picks vs. a pricier model, more searches vs. a slower and pricier guide, real booking links vs. doubling the cost of a run. I learned to measure both sides before choosing (see "Tradeoffs I made" in PRD section 7).</li>
+              <li><em>API pricing:</em> tokens in and out, why search results make calls more expensive, and how to compare cost per user run across setups.</li>
+            </ul>
+          </li>
+          <li><strong>What broke:</strong>
+            <ul>
+              <li><em>Recommendations:</em> my first prompt fix made the guides worse. Picks got generic and two very different personas got similar guides (see "More instructions can make an AI worse" above). I went back to matching specific places.</li>
+              <li><em>Reliability:</em> with web search on, the AI sometimes returned broken replies the app couldn't read. The real cause was my reply length cap: guides with search were longer than the cap and got cut off. I raised the cap, and the app now repairs a broken reply instead of showing an error.</li>
+              <li><em>Voice input:</em> my first version only filled in the note and left the place's name blank. I added a step that splits what you say into both.</li>
+              <li><em>Booking links:</em> the search couldn't find booking pages for many restaurants, especially in cities where places mostly take bookings by phone or Instagram. So the app now falls back to the restaurant's own website, and a Google search is always there.</li>
+              <li><em>Setup:</em> my OpenRouter key hit its spending limit in the middle of a test.</li>
+            </ul>
+          </li>
+          <li><strong>What changed in the PRD:</strong> Added sections 7–9: the biggest risk, how the persona tests checked it and the tradeoffs I made, how the app works, and cost per user run. The core workflow now includes voice input and booking links. I removed the taste summary card I had briefly added.</li>
+          <li><strong>What I learned from testing:</strong> Taste does carry over to a new city, but only when the app works from specific places and who goes there, not from general adjectives. Some cities are much easier than others: where the AI knows the city well, picks are strong for all three personas; elsewhere it misses some of the neighborhoods I'd expect. Booking pages are also much easier to find in some cities than others. Web search helped more than switching to a bigger model.</li>
+          <li><strong>What's next:</strong>
+            <ul>
+              <li><em>Real testers:</em> so far I've tested with three made-up personas and my friend Danielle. Next, Dario and Julia will each try two cities they know, plus my pod in class on November 17, checked against my target of 7 out of 10 picks they'd actually go to.</li>
+              <li><em>Less typing:</em> import favorites from Google Maps or Beli (my pod's suggestion), for example from a screenshot of a saved list.</li>
+              <li><em>From my original PRD, not built yet:</em> invite friends with a share link and balance the guide across everyone; edit the guide by removing a pick (with a reason, to get a replacement) or adding your own; check that places exist and are open; add where to shop and what to explore; save your profile for future trips.</li>
+              <li><em>Quality and cost:</em> improve neighborhood choice in harder cities, and cut the cost of booking links by remembering links for restaurants that come up often.</li>
+              <li><em>Analytics:</em> add PostHog events for each step of the workflow, to see where people drop off.</li>
+            </ul>
+          </li>
+          <li><strong>Cost & time this week:</strong> About $3.61 on OpenRouter, almost all of it model and web search comparisons. One user run now costs about $0.05, more than half of it the booking link searches · 2.5 hours</li>
         </ul>
       </div>
 
