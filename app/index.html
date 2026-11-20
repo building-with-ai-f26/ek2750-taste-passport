@@ -904,9 +904,13 @@
       // If the taste on screen matches these exact places, save it too (including any edits to it).
       const withTaste = tasteFor !== null && tasteFor === placesKey();
       if (withTaste) {
-        const traits = new Map(currentTaste().map((t) => [`${t.kind}|${t.name.toLowerCase()}`, t.traits]));
-        places.forEach((p) => {
-          const t = traits.get(`${p.kind}|${p.name.toLowerCase()}`);
+        // Match each place to its taste card by position (the AI keeps the order it was given),
+        // because it sometimes tidies names ("bemelmans" → "Bemelmans Bar"). Fall back to names.
+        const taste = currentTaste();
+        const sameOrder = taste.length === places.length && taste.every((t, i) => t.kind === places[i].kind);
+        const byName = new Map(taste.map((t) => [`${t.kind}|${t.name.toLowerCase()}`, t.traits]));
+        places.forEach((p, i) => {
+          const t = sameOrder ? taste[i].traits : byName.get(`${p.kind}|${p.name.toLowerCase()}`);
           if (t) p.traits = t;
         });
       }

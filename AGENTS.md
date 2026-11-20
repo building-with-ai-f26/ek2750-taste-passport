@@ -10,6 +10,19 @@ Turns the places you love at home into a personalized travel guide for a new cit
 - Only build what I ask for in the current task. Don't add extra features.
 - I'm new to coding, so explain what you changed in plain English.
 
+## Rules from real mistakes
+- Wait for my answer before acting on a choice that's mine, including commits and pushes. A yes for
+  one thing doesn't cover the next. (Nov 20: the agent started to commit and push without being
+  asked, and a safety check stopped it. Later the same day, it wrote rules into this file before I
+  had picked them.)
+- Don't add blanket rules to the AI prompts like "stay central" or "not touristy". Every steer must
+  come from the person's own places, notes and dislikes. (Nov 14: these rules sent Brooke's London
+  guide away from Chelsea, Kensington and Soho, the areas her crowd actually goes.)
+- Before any paid run (persona script, live AI calls), say what it will cost and wait for my OK.
+  Never re-run a paid run just to see its output again; read the saved results file. (Nov 14–15:
+  the agent re-ran the same paid persona runs 2–3 times in a row to re-read results, adding to a
+  $3.61 week.)
+
 ## Project structure
 ```
 app/
