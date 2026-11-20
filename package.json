@@ -1,0 +1,12 @@
+{
+  "name": "taste-passport",
+  "private": true,
+  "description": "Turns the places you love at home into a personalized travel guide for a new city.",
+  "scripts": {
+    "start": "node app/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {}
+}

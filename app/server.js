@@ -332,6 +332,51 @@ function sendJSON(res, status, obj) {
 
 const routes = { "/api/taste": handleTaste, "/api/guide": handleGuide, "/api/split": handleSplit, "/api/booking": handleBooking };
 
+// ---------- Rate limits (protect the OpenRouter bill) ----------
+// Every /api/ request counts, whether or not it reaches the AI.
+// 1. Per visitor: at most 25 requests in 10 minutes. One full run (voice for 10 places, taste reading,
+//    guide, 5 booking links) is about 17, so a real person rarely hits this.
+// 2. Whole app: at most 400 requests a day from everyone together (about 40 runs, roughly $2),
+//    a backstop in case someone gets around the per-visitor limit.
+// Counts live in memory, so they reset when the server restarts.
+const VISITOR_LIMIT = 25;
+const VISITOR_WINDOW_MS = 10 * 60 * 1000;
+const DAILY_LIMIT = 400;
+const visitors = new Map(); // visitor IP -> { count, resetAt }
+let daily = { count: 0, resetAt: Date.now() + 24 * 60 * 60 * 1000 };
+
+// On Render the visitor's IP arrives in the X-Forwarded-For header; locally it's the direct connection.
+function visitorIP(req) {
+  const forwarded = req.headers["x-forwarded-for"];
+  return forwarded ? forwarded.split(",")[0].trim() : req.socket.remoteAddress;
+}
+
+// Returns null if the request may go ahead, or { seconds, message } if it's over a limit.
+function checkRateLimit(req) {
+  const now = Date.now();
+  if (now > daily.resetAt) daily = { count: 0, resetAt: now + 24 * 60 * 60 * 1000 };
+  if (daily.count >= DAILY_LIMIT) {
+    return { seconds: Math.ceil((daily.resetAt - now) / 1000), message: "Taste Passport is taking a break for today. Please try again tomorrow." };
+  }
+  const ip = visitorIP(req);
+  let v = visitors.get(ip);
+  if (!v || now > v.resetAt) v = { count: 0, resetAt: now + VISITOR_WINDOW_MS };
+  if (v.count >= VISITOR_LIMIT) {
+    const seconds = Math.ceil((v.resetAt - now) / 1000);
+    return { seconds, message: `You've made a lot of requests. Please wait ${Math.ceil(seconds / 60)} minutes and try again.` };
+  }
+  v.count++;
+  daily.count++;
+  visitors.set(ip, v);
+  return null;
+}
+
+// Forget visitors whose 10 minutes are up, so the list doesn't grow forever.
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, v] of visitors) if (now > v.resetAt) visitors.delete(ip);
+}, VISITOR_WINDOW_MS).unref();
+
 http
   .createServer(async (req, res) => {
     if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {
@@ -340,6 +385,12 @@ http
     }
     const handler = routes[req.url];
     if (req.method === "POST" && handler) {
+      const limited = checkRateLimit(req);
+      if (limited) {
+        console.log(`${req.url} blocked by rate limit (429)`);
+        res.setHeader("Retry-After", String(limited.seconds));
+        return sendJSON(res, 429, { error: limited.message });
+      }
       try {
         console.log(`${req.url}`);
         sendJSON(res, 200, await handler(await readBody(req)));
@@ -352,4 +403,5 @@ http
     res.writeHead(404);
     res.end("Not found");
   })
-  .listen(PORT, () => console.log(`Taste Passport running at http://localhost:${PORT} (model: ${MODEL}, web search: ${WEB_SEARCH ? `on, up to ${SEARCH_MAX}` : "off"})`));
+  // 0.0.0.0 = accept connections from outside this computer (needed on Render; locally it changes nothing).
+  .listen(PORT, "0.0.0.0", () => console.log(`Taste Passport running at http://localhost:${PORT} (model: ${MODEL}, web search: ${WEB_SEARCH ? `on, up to ${SEARCH_MAX}` : "off"})`));

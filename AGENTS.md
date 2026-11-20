@@ -31,6 +31,7 @@ tests/
   run-personas.js  Runs every persona through the app for London and Istanbul.
   results/         One Markdown file per run, with empty score columns to fill in.
 .env.example       Template for .env (copy it, add your key).
+package.json       No packages. Tells Render to use Node 20+ and how to start the app.
 ```
 Not used by the app: `Intent.md`, `Plan.md`, `journal/`, `SPONSOR_MEMO.md` (course templates).
 
@@ -50,6 +51,10 @@ Not used by the app: `Intent.md`, `Plan.md`, `journal/`, `SPONSOR_MEMO.md` (cour
 - Default is Haiku + 1 search: about $0.018 for the taste reading + guide, plus about $0.028 for the
   booking link searches (always Haiku, 5 restaurants), so about $0.05 per user run in total.
 - Tested alternative: Sonnet + 1 search (`OPENROUTER_MODEL=anthropic/claude-sonnet-5.5`), about $0.11 per run for the guide alone, slightly better picks in some cities.
+- Rate limits (in `server.js`): each visitor gets 25 `/api/` requests per 10 minutes, and the whole app
+  400 a day; after that the server answers `429`. Counts reset when the server restarts.
+  Test for free: send 30 empty POSTs to `/api/split` (they fail input checks before any AI call).
+  One persona-script run is 9 requests; a third run within 10 minutes hits the limit (restart the server).
 - Voice input needs Chrome, Safari or Edge (the browser does speech-to-text). The speak button doesn't appear in Firefox.
 
 ## Test with personas
@@ -64,6 +69,38 @@ Not used by the app: `Intent.md`, `Plan.md`, `journal/`, `SPONSOR_MEMO.md` (cour
 - Keep picks tied to specific favorites and the crowd that goes there. Abstract taste summaries ("polished, buzzy") made picks generic and made different people's guides look alike.
 - No blanket rules like "central", "not touristy" or "walkable". Every steer must come from the person's own places, notes and dislikes.
 - Don't put example words in prompts that the AI could copy into someone's profile (e.g. "sceney").
+
+## Shipping (live app on Render)
+The live app runs on Render's free web service. Render deploys whatever is on `main` on GitHub,
+not what is on this laptop.
+
+First time only (Esra does these in the Render dashboard; the agent never touches the dashboard):
+1. dashboard.render.com → New → Web Service → connect `building-with-ai-f26/ek2750-taste-passport`.
+2. Language: Node. Branch: `main`. Build command: leave empty (there are no packages).
+   Start command: `node app/server.js`. Instance type: Free.
+3. Environment Variables: add `OPENROUTER_API_KEY` using a separate key made just for the live app,
+   with a small credit limit. Never paste the local `.env` key.
+4. Deploy and watch the build log until it says it is live, then open the onrender.com link on a phone.
+5. Keep it awake: in a free uptime pinger (UptimeRobot or cron-job.org, Esra's own account), check the
+   onrender.com link every 5–10 minutes. It only loads the page, so it costs no AI money and sends no
+   PostHog events. One always-awake free service uses about 744 of Render's 750 free hours a month.
+
+Every change after that:
+1. Run the app locally (`node --env-file=.env app/server.js`) and click through the changed part.
+2. Show Esra the diff and wait for "commit". Commit and push only when Esra says so.
+3. After the push, Render redeploys on its own (a few minutes). Open the live URL and check the change.
+4. Tell Esra what is live and what you checked.
+- If the live site breaks, copy the error from Render's Logs tab before changing code.
+- Free Render services sleep after 15 idle minutes; the first visit after that takes about a minute.
+
+## Ask me first
+Stop and ask Esra before doing any of these:
+- Committing or pushing to GitHub (pushing to `main` changes the live site).
+- Deleting files, data or git history (`rm`, `git reset --hard`, force push).
+- Anything with keys, secrets or permissions: `.env`, Render environment variables, OpenRouter keys,
+  repo settings.
+- Anything that costs money: running the persona script, repeated live AI calls, switching to a
+  pricier model or raising `WEB_SEARCH_MAX`. Say the expected cost first.
 
 ## Weekly build (due Monday noon)
 - Add a build log entry covering what works, what I learned, what broke or changed, costs, and hours.
