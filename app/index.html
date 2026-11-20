@@ -119,7 +119,6 @@
     }
     .tag.love { color: var(--cherry); }
     .tag.dislike { color: var(--muted); }
-    .tag.unverified { color: var(--muted); margin: 14px 0 0; }
     .pick-links { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0 0; font-size: 13px; }
     .pick-links a { color: var(--cherry); font-weight: 500; text-underline-offset: 3px; }
     .booking-note { color: var(--muted); }
@@ -149,20 +148,48 @@
     .note { font-size: 13px; color: var(--muted); margin-top: 12px; }
 
     /* Account: sign-in bar, saved places, saved trips */
-    .account {
-      border-radius: 16px; background: var(--maroon); color: var(--cream);
-      padding: 18px 20px; margin-bottom: 44px; display: grid; gap: 12px;
+    /* Top-right account menu in the hero */
+    .hero { position: relative; }
+    .topbar { position: absolute; top: 20px; right: 24px; z-index: 5; text-align: left; }
+    .menu-btn {
+      font: inherit; font-size: 13px; letter-spacing: 0.04em; cursor: pointer;
+      background: transparent; color: var(--cream); border: 1px solid var(--cream);
+      border-radius: 999px; padding: 6px 16px;
     }
-    .account p { margin: 0; }
-    .account .btn { color: var(--cream); border-color: var(--cream); }
-    .account .btn:hover:not(:disabled) { background: var(--cream); color: var(--maroon); }
-    .account .link-btn { color: var(--cream); }
-    .account .status { color: #ecd5d0; }
-    .account input, .account select { background: var(--cream); border-color: transparent; }
-    .account-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-    .account-form input { flex: 1 1 200px; width: auto; }
+    .menu-btn:hover { background: var(--cream); color: var(--maroon); }
+    .menu-list {
+      position: absolute; right: 0; top: calc(100% + 8px); min-width: 220px;
+      background: var(--card); color: var(--text); border-radius: 14px; padding: 8px;
+      box-shadow: 0 10px 30px rgba(42, 29, 26, 0.25); display: grid;
+    }
+    .menu-list .menu-email { font-size: 12px; color: var(--muted); padding: 8px 12px; margin: 0; border-bottom: 1px solid var(--blush); overflow-wrap: anywhere; }
+    .menu-list a, .menu-list button {
+      font: inherit; font-size: 14px; text-align: left; color: var(--maroon); text-decoration: none;
+      background: none; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer;
+    }
+    .menu-list a:hover, .menu-list button:hover { background: var(--blush); }
+    .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+    /* Sign-in window */
+    .auth-dialog {
+      border: none; border-radius: 18px; padding: 28px; width: min(420px, calc(100vw - 32px));
+      background: var(--maroon); color: var(--cream);
+      border: 1px solid rgba(248, 241, 231, 0.35); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
+    .auth-dialog::backdrop { background: rgba(42, 29, 26, 0.55); }
+    .auth-dialog h3 { color: var(--cream); font-size: 32px; margin-bottom: 6px; }
+    .auth-dialog p { margin: 0 0 18px; color: #ecd5d0; }
+    .auth-dialog form { display: grid; gap: 10px; }
+    .auth-dialog input { background: var(--cream); border-color: transparent; }
+    .auth-dialog .btn { color: var(--cream); border-color: var(--cream); }
+    .auth-dialog .btn:hover:not(:disabled) { background: var(--cream); color: var(--maroon); }
+    .auth-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    .auth-dialog .status { color: #ecd5d0; min-height: 1em; }
+    .auth-dialog .link-btn { color: var(--cream); justify-self: start; }
+
     .account-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-    .saved-lists { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .saved-pick { max-width: 360px; margin-bottom: 28px; }
+    .saved-pick select { width: 100%; }
     select {
       font-family: inherit; font-size: 14px; color: var(--text); background: #fff;
       border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; max-width: 100%;
@@ -196,13 +223,45 @@
 
   <!-- Hero -->
   <header class="band maroon hero">
+    <!-- Account menu (hidden if the sign-in library can't load; the app still works without accounts) -->
+    <nav class="topbar">
+      <button class="menu-btn hidden" type="button" id="signInOpen">sign in</button>
+      <div class="hidden" id="userMenu">
+        <button class="menu-btn" type="button" id="menuBtn" aria-expanded="false" aria-controls="menuList">☰ menu</button>
+        <div class="menu-list hidden" id="menuList">
+          <p class="menu-email" id="userEmail"></p>
+          <a href="#trips" id="menuTrips">your trips</a>
+          <button type="button" id="signOutBtn">sign out</button>
+        </div>
+      </div>
+    </nav>
     <div class="wrap">
       <p class="eyebrow">taste passport</p>
       <h1>same taste,<br /><em>new city.</em></h1>
       <p class="lede">Tell us the places you love at home, and the ones you don't. We'll learn why, and find their match wherever you're going.</p>
-      <a class="btn light" href="#places">begin</a>
+      <div class="hero-actions">
+        <a class="btn light" href="#places">begin</a>
+        <button class="btn light hidden" type="button" id="heroSignIn">sign in</button>
+        <a class="btn light hidden" href="#trips" id="heroTrips">your trips</a>
+      </div>
     </div>
   </header>
+
+  <!-- Sign-in window -->
+  <dialog class="auth-dialog" id="authDialog">
+    <h3>sign in</h3>
+    <p>Sign in to save your favorite places and guides. (optional)</p>
+    <form id="authForm">
+      <input id="authEmail" type="email" placeholder="email" autocomplete="email" required />
+      <input id="authPassword" type="password" placeholder="password (6+ characters)" autocomplete="current-password" minlength="6" required />
+      <div class="auth-buttons">
+        <button class="btn small" type="submit">sign in</button>
+        <button class="btn small" type="button" id="signUpBtn">create account</button>
+      </div>
+      <span class="status" id="authMsg"></span>
+      <button class="link-btn" type="button" id="authClose">continue without an account</button>
+    </form>
+  </dialog>
 
   <!-- Step 1: places -->
   <section class="band cream" id="places">
@@ -211,29 +270,10 @@
       <h2>your places</h2>
       <p class="intro">Add at least five places you love and two you don't, with a short note on each. Restaurants, bars, cafes, hotels, anything with a feeling.</p>
 
-      <!-- Account: hidden if the sign-in library can't load; the app still works without an account. -->
-      <div class="account hidden" id="account">
-        <div id="signedOut">
-          <p>Sign in to save your places for each home city and keep every guide you make. Or just carry on without an account.</p>
-          <form class="account-form" id="authForm">
-            <input id="authEmail" type="email" placeholder="email" autocomplete="email" required />
-            <input id="authPassword" type="password" placeholder="password (6+ characters)" autocomplete="current-password" minlength="6" required />
-            <button class="btn small" type="submit" id="signInBtn">sign in</button>
-            <button class="btn small" type="button" id="signUpBtn">create account</button>
-          </form>
-        </div>
-        <div class="hidden" id="signedIn">
-          <div class="account-row">
-            <span>Signed in as <strong id="userEmail"></strong></span>
-            <a class="link-btn" href="#trips">your trips</a>
-            <button class="link-btn" type="button" id="signOutBtn">sign out</button>
-          </div>
-          <div class="saved-lists">
-            <select id="listSelect" aria-label="Your saved places"></select>
-            <button class="btn small" type="button" id="saveListBtn">save these places</button>
-          </div>
-        </div>
-        <span class="status" id="accountMsg"></span>
+      <!-- Signed in with saved places: pick a city instead of filling the form in -->
+      <div class="saved-pick hidden" id="savedPick">
+        <label class="field" for="listSelect">use your saved places</label>
+        <select id="listSelect"></select>
       </div>
 
       <div class="home-city">
@@ -256,6 +296,8 @@
 
       <div class="actions">
         <button class="btn" id="tasteBtn" disabled>read my taste</button>
+        <button class="btn hidden" type="button" id="saveListBtn">save these places</button>
+        <span class="status" id="listMsg"></span>
         <span class="error" id="tasteError"></span>
       </div>
     </div>
@@ -615,7 +657,6 @@
       card.append(el("p", "pick-reason", p.reason));
       if (p.basedOn) card.append(el("p", "pick-based", `Based on ${p.basedOn}`));
       card.append(pickLinks(p, type, destination, bookings));
-      card.append(el("span", "tag unverified", "unverified"));
       return card;
     }
 
@@ -654,41 +695,59 @@
     let user = null;
     let savedLists = []; // this person's saved places, one list per home city
 
-    const accountMsg = (text) => { $("accountMsg").textContent = text || ""; };
+    const authMsg = (text) => { $("authMsg").textContent = text || ""; };
+    const listMsg = (text) => { $("listMsg").textContent = text || ""; };
     const friendly = (error, fallback) => (error.message.includes("save up to") ? error.message : fallback);
+    const show = (id, visible) => $(id).classList.toggle("hidden", !visible);
 
     async function showUser(next) {
       const changed = (next?.id || null) !== (user?.id || null);
       user = next;
-      $("signedOut").classList.toggle("hidden", !!user);
-      $("signedIn").classList.toggle("hidden", !user);
-      $("trips").classList.toggle("hidden", !user);
-      if (!user) { savedLists = []; $("tripCards").replaceChildren(); return; }
+      show("signInOpen", !user);
+      show("heroSignIn", !user);
+      show("userMenu", !!user);
+      show("heroTrips", !!user);
+      show("trips", !!user);
+      show("saveListBtn", !!user);
+      if (!user) {
+        savedLists = [];
+        show("savedPick", false);
+        $("tripCards").replaceChildren();
+        return;
+      }
       $("userEmail").textContent = user.email;
       if (changed) { await loadLists(); await loadTrips(); }
+    }
+
+    function openSignIn() {
+      authMsg("");
+      $("authDialog").showModal();
+      $("authEmail").focus();
     }
 
     async function authenticate(mode) {
       const email = $("authEmail").value.trim();
       const password = $("authPassword").value;
-      if (!email || password.length < 6) return accountMsg("Enter your email and a password of at least 6 characters.");
-      accountMsg(mode === "up" ? "Creating your account…" : "Signing in…");
+      if (!email || password.length < 6) return authMsg("Enter your email and a password of at least 6 characters.");
+      authMsg(mode === "up" ? "Creating your account…" : "Signing in…");
       const { data, error } = mode === "up"
         ? await db.auth.signUp({ email, password })
         : await db.auth.signInWithPassword({ email, password });
-      if (error) return accountMsg(error.message);
-      if (mode === "up" && !data.session) return accountMsg("Check your email to confirm your account, then sign in.");
+      if (error) return authMsg(error.message);
+      if (mode === "up" && !data.session) return authMsg("Check your email to confirm your account, then sign in.");
       $("authPassword").value = "";
-      accountMsg("");
+      $("authDialog").close();
       posthog.capture(mode === "up" ? "account_created" : "signed_in");
     }
 
-    // Saved places: pick a home city to fill in the form, or save what's in the form under its home city.
+    // Saved places: pick a home city at the top of step one instead of filling the form in,
+    // or save what's in the form (under its home city) with the button next to "read my taste".
     async function loadLists() {
       const { data, error } = await db.from("place_lists").select("id, home_city, places").order("home_city");
-      if (error) return accountMsg("Couldn't load your saved places.");
+      if (error) return listMsg("Couldn't load your saved places.");
       savedLists = data;
-      const first = el("option", null, savedLists.length ? "use saved places…" : "no saved places yet");
+      show("savedPick", savedLists.length > 0);
+      const first = el("option", null, "choose a home city…");
       first.value = "";
       $("listSelect").replaceChildren(first, ...savedLists.map((l) => {
         const option = el("option", null, `${l.home_city} (${l.places.length} places)`);
@@ -712,14 +771,14 @@
     async function saveList() {
       const homeCity = $("homeCity").value.trim();
       const places = filledPlaces();
-      if (!homeCity) return accountMsg("Add your home city first: your places are saved under it.");
-      if (!places.length) return accountMsg("Add at least one place with a name and a note first.");
+      if (!homeCity) return listMsg("Add your home city first: your places are saved under it.");
+      if (!places.length) return listMsg("Add at least one place with a name and a note first.");
       const { error } = await db.from("place_lists").upsert(
         { user_id: user.id, home_city: homeCity, places, updated_at: new Date().toISOString() },
         { onConflict: "user_id,home_city" }
       );
-      if (error) return accountMsg(friendly(error, "Couldn't save your places. Try again."));
-      accountMsg(`Saved your ${homeCity} places.`);
+      if (error) return listMsg(friendly(error, "Couldn't save your places. Try again."));
+      listMsg(`Saved your ${homeCity} places.`);
       posthog.capture("places_saved");
       loadLists();
     }
@@ -727,7 +786,7 @@
     // Saved trips: every guide made while signed in. Returns the new trip's id (or null).
     async function saveTrip(homeCity, destination, purpose, guide) {
       if (!user) {
-        $("tripSaveMsg").textContent = db ? "Sign in at the top of step one to save your guides." : "";
+        $("tripSaveMsg").textContent = db ? "Sign in (top right) to save your guides." : "";
         return null;
       }
       const { data, error } = await db.from("trips")
@@ -778,20 +837,33 @@
       $("guide").scrollIntoView({ behavior: "smooth" });
     }
 
+    // The ☰ menu: opens on click, closes on a second click, a click elsewhere, or choosing an item.
+    function setMenu(open) {
+      show("menuList", open);
+      $("menuBtn").setAttribute("aria-expanded", String(open));
+    }
+
     if (db) {
-      $("account").classList.remove("hidden");
+      show("signInOpen", true);
+      show("heroSignIn", true);
       // Fires on page load (if already signed in), sign-in and sign-out. Supabase asks that other
       // Supabase calls not run inside this callback, so the work is started just after it.
       db.auth.onAuthStateChange((_event, session) => setTimeout(() => showUser(session?.user || null), 0));
+      $("signInOpen").addEventListener("click", openSignIn);
+      $("heroSignIn").addEventListener("click", openSignIn);
+      $("authClose").addEventListener("click", () => $("authDialog").close());
       $("authForm").addEventListener("submit", (e) => { e.preventDefault(); authenticate("in"); });
       $("signUpBtn").addEventListener("click", () => authenticate("up"));
-      $("signOutBtn").addEventListener("click", async () => { await db.auth.signOut(); accountMsg("Signed out."); });
+      $("menuBtn").addEventListener("click", (e) => { e.stopPropagation(); setMenu($("menuList").classList.contains("hidden")); });
+      document.addEventListener("click", (e) => { if (!$("userMenu").contains(e.target)) setMenu(false); });
+      $("menuTrips").addEventListener("click", () => setMenu(false));
+      $("signOutBtn").addEventListener("click", async () => { setMenu(false); await db.auth.signOut(); });
       $("saveListBtn").addEventListener("click", saveList);
       $("listSelect").addEventListener("change", () => {
         const list = savedLists.find((l) => l.id === $("listSelect").value);
         if (!list) return;
         fillPlaces(list.home_city, list.places);
-        accountMsg(`Loaded your ${list.home_city} places. Edit anything, then read your taste.`);
+        listMsg(`Loaded your ${list.home_city} places. Edit anything, then read your taste.`);
         $("listSelect").value = "";
       });
     }
