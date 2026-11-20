@@ -52,13 +52,15 @@ Not used by the app: `Intent.md`, `Plan.md`, `journal/`, `SPONSOR_MEMO.md` (cour
   booking link searches (always Haiku, 5 restaurants), so about $0.05 per user run in total.
 - Tested alternative: Sonnet + 1 search (`OPENROUTER_MODEL=anthropic/claude-sonnet-5.5`), about $0.11 per run for the guide alone, slightly better picks in some cities.
 - Rate limits (in `server.js`): each visitor gets 25 `/api/` requests per 10 minutes, and the whole app
-  400 a day; after that the server answers `429`. Counts reset when the server restarts.
+  400 a day; after that the server answers `429`. A guide request counts as 4 (it can make up to 4 AI
+  calls). Counts reset when the server restarts. Security details: `SECURITY.md`.
   Test for free: send 30 empty POSTs to `/api/split` (they fail input checks before any AI call).
-  One persona-script run is 9 requests; a third run within 10 minutes hits the limit (restart the server).
+  One persona-script run counts 27 (3 taste + 6 guides × 4), over the limit: see "Test with personas".
 - Voice input needs Chrome, Safari or Edge (the browser does speech-to-text). The speak button doesn't appear in Firefox.
 
 ## Test with personas
-1. Start the app (above).
+1. Start the app with a higher per-visitor limit, because one run counts 27 against the usual 25:
+   `env VISITOR_LIMIT=100 node --env-file=.env app/server.js` (never set this on Render).
 2. In a second terminal: `node tests/run-personas.js <label>`, e.g. `node tests/run-personas.js after-my-change`
 3. Read `tests/results/<date>-<label>.md` and score each pick. A full run costs about $0.10 on the default settings.
 - To test another model without touching `.env`, run a second server on another port, e.g.

@@ -12,6 +12,8 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const dns = require("dns").promises;
+const net = require("net");
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.OPENROUTER_API_KEY;
@@ -27,6 +29,13 @@ if (!API_KEY || API_KEY.includes("replace-with-your-key")) {
 }
 
 // ---------- AI helper ----------
+
+// When OpenRouter fails, the real reason (e.g. out of credit, key problem) goes to the server log only.
+// Visitors get a plain message, so account details never reach the browser.
+function aiServiceError(status, data) {
+  console.error(`  OpenRouter error ${status}: ${data.error?.message || "no message"}`);
+  return new Error("The AI service had a problem. Please try again in a minute.");
+}
 
 // Sends one prompt to OpenRouter and returns the reply parsed as JSON.
 // With { webSearch: true } the AI may search the web (up to SEARCH_MAX times) before answering.
@@ -51,7 +60,7 @@ async function askAI(system, user, { webSearch = false } = {}) {
     }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || `OpenRouter error ${res.status}`);
+  if (!res.ok) throw aiServiceError(res.status, data);
 
   const cost = data.usage?.cost;
   console.log(`  ${MODEL}${webSearch ? " · web search on" : ""} · ${data.usage?.prompt_tokens} in / ${data.usage?.completion_tokens} out tokens · $${cost ?? "?"}`);
@@ -173,13 +182,44 @@ const trimSlash = (url) => url.replace(/\/+$/, "");
 // Lowercase without accents, so "Mürver" and "murver" match.
 const plain = (text) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i").toLowerCase();
 
+// True only for an https address whose name points to the public internet. Blocks this computer
+// (localhost) and private networks, so nobody can use our server to peek at machines behind it.
+async function isPublicHttps(u) {
+  if (u.protocol !== "https:" || (u.port && u.port !== "443")) return false;
+  const host = u.hostname.replace(/^\[|\]$/g, "");
+  const addresses = net.isIP(host) ? [{ address: host }] : await dns.lookup(host, { all: true });
+  return addresses.length > 0 && addresses.every(({ address }) => isPublicIP(address));
+}
+
+function isPublicIP(ip) {
+  if (ip.toLowerCase().startsWith("::ffff:")) {
+    // IPv4 written as IPv6: check the IPv4 part, and refuse the hex spelling (e.g. ::ffff:7f00:1) outright.
+    ip = ip.slice(7);
+    if (!net.isIPv4(ip)) return false;
+  }
+  if (net.isIPv4(ip)) {
+    const [a, b] = ip.split(".").map(Number);
+    return !(a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224);
+  }
+  const low = ip.toLowerCase();
+  return !(low === "::" || low === "::1" || low.startsWith("fc") || low.startsWith("fd") || low.startsWith("fe80"));
+}
+
 // Checks a website the AI suggested: it must be a public https page that loads
 // and mentions the restaurant's name. This stops made-up addresses.
 async function websiteLooksReal(url, name) {
   try {
-    const u = new URL(url);
-    if (u.protocol !== "https:" || /^(localhost|127\.|10\.|192\.168\.|169\.254\.)/.test(u.hostname)) return false;
-    const res = await fetch(u, { redirect: "follow", signal: AbortSignal.timeout(6000), headers: { "User-Agent": "Mozilla/5.0" } });
+    // Follow up to 3 redirects by hand, checking every address, so a redirect can't lead to a private one.
+    let u = new URL(url);
+    let res;
+    for (let hops = 0; ; hops++) {
+      if (hops > 3 || !(await isPublicHttps(u))) return false;
+      res = await fetch(u, { redirect: "manual", signal: AbortSignal.timeout(6000), headers: { "User-Agent": "Mozilla/5.0" } });
+      const next = res.headers.get("location");
+      if (res.status < 300 || res.status >= 400 || !next) break;
+      u = new URL(next, u);
+    }
     if (!res.ok) return false;
     const page = plain((await res.text()).slice(0, 300000));
     const generic = ["restaurant", "restoran", "lokantasi", "cafe", "bar", "the", "and", "meyhane", "london", "istanbul"];
@@ -208,7 +248,7 @@ async function handleBooking(body) {
     }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || `OpenRouter error ${res.status}`);
+  if (!res.ok) throw aiServiceError(res.status, data);
 
   // The pages the search actually returned, and the links the AI picked.
   const message = data.choices?.[0]?.message || {};
@@ -271,6 +311,7 @@ function guideProblems(guide) {
 async function handleGuide(body) {
   const { homeCity, places, destination, purpose } = body;
   if (!destination || !purpose) throw new Error("Add a destination and what the trip is for.");
+  if (!Array.isArray(places) || !places.every((p) => p && Array.isArray(p.traits))) throw new Error("Read your taste first, then make the guide.");
 
   const describe = (kind) =>
     places
@@ -317,7 +358,10 @@ function readBody(req) {
     let data = "";
     req.on("data", (chunk) => {
       data += chunk;
-      if (data.length > 100_000) reject(new Error("Request too large"));
+      if (data.length > 100_000) {
+        reject(new Error("Request too large"));
+        req.destroy(); // stop reading, so a huge upload can't fill the server's memory
+      }
     });
     req.on("end", () => {
       try { resolve(JSON.parse(data || "{}")); } catch { reject(new Error("Invalid JSON")); }
@@ -333,13 +377,15 @@ function sendJSON(res, status, obj) {
 const routes = { "/api/taste": handleTaste, "/api/guide": handleGuide, "/api/split": handleSplit, "/api/booking": handleBooking };
 
 // ---------- Rate limits (protect the OpenRouter bill) ----------
-// Every /api/ request counts, whether or not it reaches the AI.
-// 1. Per visitor: at most 25 requests in 10 minutes. One full run (voice for 10 places, taste reading,
-//    guide, 5 booking links) is about 17, so a real person rarely hits this.
-// 2. Whole app: at most 400 requests a day from everyone together (about 40 runs, roughly $2),
-//    a backstop in case someone gets around the per-visitor limit.
+// Every /api/ request counts, whether or not it reaches the AI. A guide counts as 4, because one guide
+// request can make up to 4 AI calls with web search (fix-up retries); everything else counts as 1.
+// 1. Per visitor: at most 25 in 10 minutes. One full run (voice for 10 places, taste reading,
+//    guide, 5 booking links) is about 20, so a real person rarely hits this.
+// 2. Whole app: at most 400 a day from everyone together (about 20 full runs, roughly $1; at worst
+//    about $4 if it were all guides), a backstop in case someone gets around the per-visitor limit.
 // Counts live in memory, so they reset when the server restarts.
-const VISITOR_LIMIT = 25;
+const COST = { "/api/guide": 4 };
+const VISITOR_LIMIT = Number(process.env.VISITOR_LIMIT || 25); // raise locally for the persona script
 const VISITOR_WINDOW_MS = 10 * 60 * 1000;
 const DAILY_LIMIT = 400;
 const visitors = new Map(); // visitor IP -> { count, resetAt }
@@ -353,20 +399,21 @@ function visitorIP(req) {
 
 // Returns null if the request may go ahead, or { seconds, message } if it's over a limit.
 function checkRateLimit(req) {
+  const cost = COST[req.url] || 1;
   const now = Date.now();
   if (now > daily.resetAt) daily = { count: 0, resetAt: now + 24 * 60 * 60 * 1000 };
-  if (daily.count >= DAILY_LIMIT) {
+  if (daily.count + cost > DAILY_LIMIT) {
     return { seconds: Math.ceil((daily.resetAt - now) / 1000), message: "Taste Passport is taking a break for today. Please try again tomorrow." };
   }
   const ip = visitorIP(req);
   let v = visitors.get(ip);
   if (!v || now > v.resetAt) v = { count: 0, resetAt: now + VISITOR_WINDOW_MS };
-  if (v.count >= VISITOR_LIMIT) {
+  if (v.count + cost > VISITOR_LIMIT) {
     const seconds = Math.ceil((v.resetAt - now) / 1000);
     return { seconds, message: `You've made a lot of requests. Please wait ${Math.ceil(seconds / 60)} minutes and try again.` };
   }
-  v.count++;
-  daily.count++;
+  v.count += cost;
+  daily.count += cost;
   visitors.set(ip, v);
   return null;
 }
@@ -380,7 +427,12 @@ setInterval(() => {
 http
   .createServer(async (req, res) => {
     if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "X-Content-Type-Options": "nosniff", // browsers must treat the page as exactly what we say it is
+        "X-Frame-Options": "DENY", // other sites can't show our page inside theirs to trick clicks
+        "Referrer-Policy": "strict-origin-when-cross-origin", // links out don't reveal full page addresses
+      });
       return fs.createReadStream(path.join(__dirname, "index.html")).pipe(res);
     }
     const handler = routes[req.url];
