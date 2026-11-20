@@ -85,17 +85,29 @@
     }
     input:focus, textarea:focus { border-color: var(--maroon); }
     textarea { resize: vertical; min-height: 64px; }
-    .home-city { max-width: 360px; margin-bottom: 44px; }
+    /* Step one: split block (cream text + cherry panel), like the design reference */
+    .split { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0; margin-bottom: 56px; border-radius: 18px; overflow: hidden; }
+    .split-text { padding: 8px 48px 8px 0; align-self: center; }
+    .split-text .intro { margin-bottom: 0; }
+    .split-panel { background: var(--cherry); color: var(--cream); padding: 40px 36px; border-radius: 18px; }
+    .split-panel .field { color: var(--cream); }
+    .split-panel input, .split-panel select { background: var(--cream); border-color: transparent; width: 100%; }
+    .script { font-family: "Playfair Display", serif; font-style: italic; font-size: 26px; line-height: 1.2; margin: 0 0 22px; color: var(--cream); }
+    .or { font-family: "Playfair Display", serif; font-style: italic; font-size: 16px; margin: 22px 0 8px; color: #f3d9d4; }
 
     /* Places entry */
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
-    .col-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
-    .count { font-size: 12px; color: var(--muted); }
-    .place-row {
-      border: 1px solid var(--line); border-radius: 14px; background: var(--card);
-      padding: 14px; margin-bottom: 12px; display: grid; gap: 8px;
+    .col-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--maroon); }
+    .count {
+      font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--maroon); border: 1px solid var(--maroon); border-radius: 999px; padding: 2px 10px; white-space: nowrap;
     }
-    .place-row input, .place-row textarea { background: #fff; }
+    .place-row {
+      border: 1px solid var(--maroon); border-radius: 16px; background: #f7e3e1;
+      padding: 16px; margin-bottom: 14px; display: grid; gap: 8px;
+    }
+    .place-row input, .place-row textarea { background: var(--card); border-color: transparent; }
+    .place-row input:focus, .place-row textarea:focus { border-color: var(--maroon); }
     .voice { display: flex; align-items: center; gap: 10px; }
     .voice-btn {
       border: 1px solid var(--line); background: transparent; color: var(--maroon); cursor: pointer;
@@ -188,8 +200,6 @@
     .auth-dialog .link-btn { color: var(--cream); justify-self: start; }
 
     .account-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-    .saved-pick { max-width: 360px; margin-bottom: 28px; }
-    .saved-pick select { width: 100%; }
     select {
       font-family: inherit; font-size: 14px; color: var(--text); background: #fff;
       border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; max-width: 100%;
@@ -203,7 +213,9 @@
 
     @media (max-width: 720px) {
       .band { padding: 64px 0; }
-      .two-col, .trip-grid { grid-template-columns: 1fr; }
+      .two-col, .trip-grid, .split { grid-template-columns: 1fr; }
+      .split-text { padding: 0 0 28px; }
+      .split-panel { padding: 28px 22px; }
     }
   </style>
   <!-- PostHog analytics: pageviews, clicks and session replay. This key is public by design. -->
@@ -230,7 +242,8 @@
         <button class="menu-btn" type="button" id="menuBtn" aria-expanded="false" aria-controls="menuList">☰ menu</button>
         <div class="menu-list hidden" id="menuList">
           <p class="menu-email" id="userEmail"></p>
-          <a href="#trips" id="menuTrips">your trips</a>
+          <a href="#savedPlaces" class="menu-link">saved places</a>
+          <a href="#trips" class="menu-link">your trips</a>
           <button type="button" id="signOutBtn">sign out</button>
         </div>
       </div>
@@ -266,19 +279,23 @@
   <!-- Step 1: places -->
   <section class="band cream" id="places">
     <div class="wrap">
-      <p class="eyebrow">step one</p>
-      <h2>your places</h2>
-      <p class="intro">Add at least five places you love and two you don't, with a short note on each. Restaurants, bars, cafes, hotels, anything with a feeling.</p>
-
-      <!-- Signed in with saved places: pick a city instead of filling the form in -->
-      <div class="saved-pick hidden" id="savedPick">
-        <label class="field" for="listSelect">use your saved places</label>
-        <select id="listSelect"></select>
-      </div>
-
-      <div class="home-city">
-        <label class="field" for="homeCity">home city</label>
-        <input id="homeCity" placeholder="e.g. London, Mexico City, Chicago" />
+      <!-- Split block, like the design reference: heading on cream, home city on a cherry panel -->
+      <div class="split">
+        <div class="split-text">
+          <p class="eyebrow">step one</p>
+          <h2>your<br />places</h2>
+          <p class="intro">Add at least five places you love and two you don't, with a short note on each. Restaurants, bars, cafes, hotels, anything with a feeling.</p>
+        </div>
+        <div class="split-panel">
+          <p class="script">where you call home</p>
+          <label class="field" for="homeCity">home city</label>
+          <input id="homeCity" placeholder="e.g. London, Mexico City, Chicago" />
+          <!-- Signed in with saved places: pick a city instead of filling the form in -->
+          <div class="saved-pick hidden" id="savedPick">
+            <p class="or">or start from your saved places</p>
+            <select id="listSelect" aria-label="Your saved places"></select>
+          </div>
+        </div>
       </div>
 
       <div class="two-col">
@@ -344,6 +361,16 @@
       <p class="intro">Every pick is tied to something you love. These places haven't been checked yet, so confirm they exist and are open before you go.</p>
       <p class="status" id="tripSaveMsg"></p>
       <div id="guideBody"></div>
+    </div>
+  </section>
+
+  <!-- Saved places (signed in only): one list per home city -->
+  <section class="band cream hidden" id="savedPlaces">
+    <div class="wrap">
+      <p class="eyebrow">saved</p>
+      <h2>saved places</h2>
+      <p class="intro">Your favorites and dislikes for each home city. Open one to start a new guide from it, or to edit it and save your changes.</p>
+      <div class="cards" id="listCards"></div>
     </div>
   </section>
 
@@ -708,11 +735,13 @@
       show("userMenu", !!user);
       show("heroTrips", !!user);
       show("trips", !!user);
+      show("savedPlaces", !!user);
       show("saveListBtn", !!user);
       if (!user) {
         savedLists = [];
         show("savedPick", false);
         $("tripCards").replaceChildren();
+        $("listCards").replaceChildren();
         return;
       }
       $("userEmail").textContent = user.email;
@@ -754,6 +783,56 @@
         option.value = l.id;
         return option;
       }));
+      renderListCards();
+      updateSaveLabel();
+    }
+
+    // "New York" and "new york" are the same city: saving either one updates the same list.
+    const findList = (homeCity) => savedLists.find((l) => l.home_city.toLowerCase() === homeCity.trim().toLowerCase());
+
+    // The save button says what it will do: update an existing city, or save a new one.
+    function updateSaveLabel() {
+      const match = findList($("homeCity").value);
+      $("saveListBtn").textContent = match ? `save changes to ${match.home_city}` : "save these places";
+    }
+
+    // The "saved places" section: one card per home city, with open (to use or edit) and delete.
+    function renderListCards() {
+      const wrap = $("listCards");
+      wrap.replaceChildren();
+      if (!savedLists.length) {
+        return wrap.append(el("p", "status", "No saved places yet. Fill in step one and press \"save these places\"."));
+      }
+      savedLists.forEach((l) => {
+        const loves = l.places.filter((p) => p.kind !== "dislike");
+        const dislikes = l.places.filter((p) => p.kind === "dislike");
+        const card = el("div", "card trip-card");
+        card.append(el("h3", null, l.home_city));
+        card.append(el("p", "pick-hood", `${loves.length} loved · ${dislikes.length} not for you`));
+        card.append(el("p", "pick-based", loves.map((p) => p.name).join(" · ")));
+        const row = el("div", "account-row");
+        const open = el("button", "btn small", "open");
+        open.type = "button";
+        open.addEventListener("click", () => useList(l));
+        const remove = el("button", "link-btn", "delete");
+        remove.type = "button";
+        remove.addEventListener("click", async () => {
+          if (!confirm(`Delete your ${l.home_city} places? This can't be undone.`)) return;
+          const { error } = await db.from("place_lists").delete().eq("id", l.id);
+          if (!error) loadLists();
+        });
+        row.append(open, remove);
+        card.append(row);
+        wrap.append(card);
+      });
+    }
+
+    // Fills step one with a saved list, ready to make a guide from it or to edit and save again.
+    function useList(list) {
+      fillPlaces(list.home_city, list.places);
+      updateSaveLabel();
+      listMsg(`Your ${list.home_city} places are in. Make a guide, or change anything and save your changes.`);
+      $("places").scrollIntoView({ behavior: "smooth" });
     }
 
     function fillPlaces(homeCity, places) {
@@ -769,7 +848,8 @@
     }
 
     async function saveList() {
-      const homeCity = $("homeCity").value.trim();
+      const typed = $("homeCity").value.trim();
+      const homeCity = findList(typed)?.home_city || typed; // reuse the saved spelling, so it updates that list
       const places = filledPlaces();
       if (!homeCity) return listMsg("Add your home city first: your places are saved under it.");
       if (!places.length) return listMsg("Add at least one place with a name and a note first.");
@@ -856,14 +936,16 @@
       $("signUpBtn").addEventListener("click", () => authenticate("up"));
       $("menuBtn").addEventListener("click", (e) => { e.stopPropagation(); setMenu($("menuList").classList.contains("hidden")); });
       document.addEventListener("click", (e) => { if (!$("userMenu").contains(e.target)) setMenu(false); });
-      $("menuTrips").addEventListener("click", () => setMenu(false));
+      document.querySelectorAll(".menu-link").forEach((a) => a.addEventListener("click", () => setMenu(false)));
+      $("homeCity").addEventListener("input", updateSaveLabel);
       $("signOutBtn").addEventListener("click", async () => { setMenu(false); await db.auth.signOut(); });
       $("saveListBtn").addEventListener("click", saveList);
       $("listSelect").addEventListener("change", () => {
         const list = savedLists.find((l) => l.id === $("listSelect").value);
         if (!list) return;
         fillPlaces(list.home_city, list.places);
-        listMsg(`Loaded your ${list.home_city} places. Edit anything, then read your taste.`);
+        updateSaveLabel();
+        listMsg(`Your ${list.home_city} places are in. Make a guide, or change anything and save your changes.`);
         $("listSelect").value = "";
       });
     }
