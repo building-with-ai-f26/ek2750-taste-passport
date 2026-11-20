@@ -148,6 +148,8 @@
     /* Trip */
     .trip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 760px; }
     .band.cherry input { background: var(--cream); border-color: transparent; }
+    .trip-msg { font-family: "Playfair Display", serif; font-style: italic; font-size: 16px; color: #f3d9d4; margin: -24px 0 28px; }
+    .trip-msg:empty { display: none; }
 
     /* Guide */
     .guide-group { margin-top: 56px; }
@@ -338,6 +340,7 @@
       <p class="eyebrow">step three</p>
       <h2>your trip</h2>
       <p class="intro">Where are you going, and what is the trip for?</p>
+      <p class="trip-msg" id="tripMsg"></p>
       <div class="trip-grid">
         <div>
           <label class="field" for="destination">destination</label>
@@ -542,6 +545,7 @@
       $("taste").classList.add("hidden");
       $("trip").classList.add("hidden");
       $("tasteCards").replaceChildren();
+      $("tripMsg").textContent = "";
       tasteFor = null;
     }
 
@@ -563,7 +567,11 @@
         const data = await post("/api/taste", { homeCity: $("homeCity").value.trim(), places: filledPlaces() });
         showTaste(data.places || []);
         $("listMsg").textContent = "";
+        $("tripMsg").textContent = "";
         $("taste").scrollIntoView({ behavior: "smooth" });
+        // Read for a saved city without editing it? Save the taste to it automatically,
+        // so next time that city goes straight to the trip.
+        if (unchangedSavedList()) saveList({ auto: true });
       } catch (err) {
         $("tasteError").textContent = err.message;
       } finally {
@@ -691,7 +699,15 @@
       }
     }
 
-    function showBooking(link, note, { url, website }) {
+    // Only normal web links. Saved trips come back from the database, so their links are checked
+    // again here: anything that isn't http(s), like a planted "javascript:" link, is ignored.
+    function isWebLink(value) {
+      try { return ["http:", "https:"].includes(new URL(value).protocol); } catch { return false; }
+    }
+
+    function showBooking(link, note, links) {
+      const url = isWebLink(links.url) ? links.url : null;
+      const website = isWebLink(links.website) ? links.website : null;
       if (url) {
         // Real booking page found: link straight to it.
         link.href = url;
@@ -865,24 +881,36 @@
     // Fills step one with a saved list, ready to make a guide from it or to edit and save again.
     function useList(list) {
       $("listSelect").value = list.id;
-      const hasTaste = loadList(list);
-      $(hasTaste ? "taste" : "places").scrollIntoView({ behavior: "smooth" });
+      if (!loadList(list)) $("places").scrollIntoView({ behavior: "smooth" });
     }
 
-    // Puts a saved list into step one. If it was saved with its taste reading, that shows too,
-    // with the trip step, so there's no need to read the same places again. Returns whether it did.
+    // Puts a saved list into step one. If it was saved with its taste reading, that shows too and
+    // the page jumps straight to "your trip", so there's no need to read the same places again.
+    // Returns whether it had a saved taste.
     function loadList(list) {
       fillPlaces(list.home_city, list.places);
       updateSaveLabel();
       const hasTaste = list.places.length > 0 && list.places.every((p) => Array.isArray(p.traits) && p.traits.length);
       if (hasTaste) {
         showTaste(list.places.map((p) => ({ kind: p.kind === "dislike" ? "dislike" : "love", name: p.name, traits: p.traits })));
-        listMsg(`Your ${list.home_city} places and taste are in. Check your taste below, then plan your trip.`);
+        listMsg(`Using your saved ${list.home_city} taste. Change any place and you'll read your taste again.`);
+        $("tripMsg").textContent = `Using your saved ${list.home_city} taste (it's above if you want to check it). Where are you going?`;
+        $("trip").scrollIntoView({ behavior: "smooth" });
+        $("destination").focus({ preventScroll: true });
       } else {
         hideTaste();
-        listMsg(`Your ${list.home_city} places are in. Next: press read my taste.`);
+        listMsg(`Your ${list.home_city} places are in. Press read my taste once and it'll be saved for next time.`);
       }
       return hasTaste;
+    }
+
+    // The saved list for this home city, if the places on screen are exactly the saved ones (not edited).
+    function unchangedSavedList() {
+      if (!user) return null;
+      const list = findList($("homeCity").value);
+      if (!list) return null;
+      const strip = (places) => JSON.stringify(places.map(({ kind, name, note }) => [kind, name, note]));
+      return strip(list.places) === strip(filledPlaces()) ? list : null;
     }
 
     function fillPlaces(homeCity, places) {
@@ -897,7 +925,8 @@
       updateCounts();
     }
 
-    async function saveList() {
+    // { auto: true } = saved automatically after reading the taste of an unedited saved city.
+    async function saveList({ auto = false } = {}) {
       const typed = $("homeCity").value.trim();
       const homeCity = findList(typed)?.home_city || typed; // reuse the saved spelling, so it updates that list
       const places = filledPlaces();
@@ -921,7 +950,8 @@
         { onConflict: "user_id,home_city" }
       );
       if (error) return listMsg(friendly(error, "Couldn't save your places. Try again."));
-      listMsg(withTaste ? `Saved your ${homeCity} places and taste.` : `Saved your ${homeCity} places.`);
+      listMsg(auto ? `Saved your ${homeCity} taste: next time ${homeCity} goes straight to your trip.`
+        : withTaste ? `Saved your ${homeCity} places and taste.` : `Saved your ${homeCity} places.`);
       posthog.capture("places_saved");
       loadLists();
     }
