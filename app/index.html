@@ -252,9 +252,11 @@
       <p class="eyebrow">taste passport</p>
       <h1>same taste,<br /><em>new city.</em></h1>
       <p class="lede">Tell us the places you love at home, and the ones you don't. We'll learn why, and find their match wherever you're going.</p>
+      <!-- Signed out: sign in / continue without signing in. Signed in (or no accounts): begin / your trips. -->
       <div class="hero-actions">
-        <a class="btn light" href="#places">begin</a>
         <button class="btn light hidden" type="button" id="heroSignIn">sign in</button>
+        <a class="btn light hidden" href="#places" id="heroGuest">continue without signing in</a>
+        <a class="btn light" href="#places" id="heroBegin">begin</a>
         <a class="btn light hidden" href="#trips" id="heroTrips">your trips</a>
       </div>
     </div>
@@ -732,6 +734,8 @@
       user = next;
       show("signInOpen", !user);
       show("heroSignIn", !user);
+      show("heroGuest", !user);
+      show("heroBegin", !!user);
       show("userMenu", !!user);
       show("heroTrips", !!user);
       show("trips", !!user);
@@ -776,13 +780,17 @@
       if (error) return listMsg("Couldn't load your saved places.");
       savedLists = data;
       show("savedPick", savedLists.length > 0);
+      const keep = $("listSelect").value; // stay on the city that's showing, if it still exists
       const first = el("option", null, "choose a home city…");
       first.value = "";
+      const fresh = el("option", null, "+ start fresh (empty form)");
+      fresh.value = "fresh";
       $("listSelect").replaceChildren(first, ...savedLists.map((l) => {
         const option = el("option", null, `${l.home_city} (${l.places.length} places)`);
         option.value = l.id;
         return option;
-      }));
+      }), fresh);
+      $("listSelect").value = savedLists.some((l) => l.id === keep) ? keep : "";
       renderListCards();
       updateSaveLabel();
     }
@@ -829,6 +837,7 @@
 
     // Fills step one with a saved list, ready to make a guide from it or to edit and save again.
     function useList(list) {
+      $("listSelect").value = list.id;
       fillPlaces(list.home_city, list.places);
       updateSaveLabel();
       listMsg(`Your ${list.home_city} places are in. Make a guide, or change anything and save your changes.`);
@@ -926,6 +935,8 @@
     if (db) {
       show("signInOpen", true);
       show("heroSignIn", true);
+      show("heroGuest", true);
+      show("heroBegin", false);
       // Fires on page load (if already signed in), sign-in and sign-out. Supabase asks that other
       // Supabase calls not run inside this callback, so the work is started just after it.
       db.auth.onAuthStateChange((_event, session) => setTimeout(() => showUser(session?.user || null), 0));
@@ -941,12 +952,20 @@
       $("signOutBtn").addEventListener("click", async () => { setMenu(false); await db.auth.signOut(); });
       $("saveListBtn").addEventListener("click", saveList);
       $("listSelect").addEventListener("change", () => {
-        const list = savedLists.find((l) => l.id === $("listSelect").value);
+        const choice = $("listSelect").value;
+        if (choice === "fresh") {
+          // Empty form for a new home city; the saved lists stay as they are.
+          fillPlaces("", []);
+          updateSaveLabel();
+          $("listSelect").value = "";
+          listMsg("Fresh start: add a home city and your places.");
+          return $("homeCity").focus();
+        }
+        const list = savedLists.find((l) => l.id === choice);
         if (!list) return;
         fillPlaces(list.home_city, list.places);
         updateSaveLabel();
         listMsg(`Your ${list.home_city} places are in. Make a guide, or change anything and save your changes.`);
-        $("listSelect").value = "";
       });
     }
   </script>
