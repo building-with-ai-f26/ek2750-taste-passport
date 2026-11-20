@@ -119,8 +119,10 @@
       <p class="eyebrow">NYU Stern · Building with AI · Fall 2026</p>
       <h1>Taste Passport</h1>
       <p class="tagline">Same taste, new city.</p>
-      <p class="meta">Esra Karamanci (ek2750) · PRD v2, November 15, 2026 (v1: November 8)</p>
+      <p class="meta">Esra Karamanci (ek2750) · PRD v3, November 20, 2026 (v2: November 15, v1: November 8)</p>
+      <p class="meta"><strong>Try it live:</strong> <a href="https://taste-passport-7jya.onrender.com">taste-passport-7jya.onrender.com</a> (works on your phone; the first visit can take a few seconds)</p>
       <nav>
+        <a href="https://taste-passport-7jya.onrender.com">Live app</a>
         <a href="#prd">PRD</a>
         <a href="#prototype">Prototype</a>
         <a href="#costs">Costs &amp; Analytics</a>
@@ -183,16 +185,16 @@
         </thead>
         <tbody>
           <tr>
-            <td>Member accounts</td>
-            <td>For now, friends join a trip through a share link and add their own favorites and dislikes. Inviting members with their own accounts would need logins and a user database, which adds a lot of complexity without changing what the product does at this stage.</td>
+            <td>Shared group accounts</td>
+            <td>There won't be a shared trip that everyone logs into, with members, permissions and a group profile. Only the person planning the trip has an account. Friends join through a share link and add their favorites and dislikes without signing up. A full group account system would add a lot of work and slow friends down, without making the picks any better.</td>
           </tr>
           <tr>
-            <td>Google Maps import and map view</td>
-            <td>Importing saved places and showing picks on a map would make the app easier to use, but neither is needed to test whether the taste matching works.</td>
+            <td>Map view</td>
+            <td>Showing every pick on one map would be nice, but each pick already links to Google Maps, and a map isn't needed to test whether the taste matching works.</td>
           </tr>
           <tr>
-            <td>Booking, reservations and itineraries</td>
-            <td>Every travel app already competes on logistics. The value here is taste, and picks can link out to book.</td>
+            <td>Importing likes from Beli or Google Maps</td>
+            <td>Pulling in places people already saved in apps like Beli or Google Maps would mean less typing, but voice input already makes entering places quick, and the notes on why you love each place are what make the picks personal.</td>
           </tr>
         </tbody>
       </table>
@@ -206,7 +208,7 @@
 
       <h3>7. Biggest risk and how Build 2 tests it (PRD v2)</h3>
       <p><strong>Biggest risk:</strong> the app understands my taste at home but can't carry it to a new city. If two very different people get similar guides, or the picks are generic, popular or touristy instead of personal, the product doesn't work.</p>
-      <p><strong>How this build tests it:</strong> I created three test personas who live in New York and have clearly different taste, each with 5 favorites and 2 dislikes with notes: Mara (alternative and artsy), Brooke (mainstream and trendy) and Sam (a budget foodie). Their tastes clash on purpose. Brooke dislikes two of Mara's favorites, and Sam dislikes two of Brooke's. A script sends all three through the real app for London and Istanbul, the two cities I know best, so I can judge every pick. I ran it after every change and compared the results side by side. Beyond the personas, my pod already tested the Build 1 prototype in class last week (November 10) and suggested two of this build's features (voice input and booking links), and this week my friend Danielle tried it with her own New York favorites for a trip to London (screenshots below). Against my target of 7 out of 10 picks a tester would actually go to, <strong>Danielle rated her London guide 8 out of 10</strong>. My friend Selin tried an earlier version for Istanbul and rated it <strong>5.5 out of 10</strong>, below the target, which matches what I saw with the personas: Istanbul is harder. The first row is where Build 1 left off; every row after it is a version I made during Build 2.</p>
+      <p><strong>How this build tests it:</strong> I created three test personas who live in New York and have clearly different taste, each with 5 favorites and 2 dislikes with notes: Mara (alternative and artsy), Brooke (mainstream and trendy) and Sam (a budget foodie). Their tastes clash on purpose. Brooke dislikes two of Mara's favorites, and Sam dislikes two of Brooke's. A script sends all three through the real app for London and Istanbul, the two cities I know best, so I can judge every pick. I ran it after every change and compared the results side by side. Beyond the personas, my pod already tested the Build 1 prototype in class last week (November 10) and suggested two of this build's features (voice input and booking links), and this week my friend Danielle tried it with her own New York favorites for a trip to London. Against my target of 7 out of 10 picks a tester would actually go to, <strong>Danielle rated her London guide 8 out of 10</strong>. My friend Selin tried an earlier version for Istanbul and rated it <strong>5.5 out of 10</strong>, below the target, which matches what I saw with the personas: Istanbul is harder. The first row is where Build 1 left off; every row after it is a version I made during Build 2.</p>
       <table>
         <thead>
           <tr><th>Version</th><th>What changed</th><th>What happened</th></tr>
@@ -238,8 +240,25 @@
         <li><strong>Guide:</strong> the server sends the reviewed taste, destination and trip purpose back to the AI. The AI first matches each favorite's home neighborhood to a neighborhood in the destination, can do one web search to check current places, and then picks 1–2 neighborhoods to stay in, 5 places to eat and 3 places to drink. Each pick is tied to a favorite and the reason why.</li>
         <li><strong>Checks:</strong> the server checks every guide before showing it. If it has too few places, or more than 60% of the picks are in one neighborhood, it asks the AI once more and says what to fix. If a reply comes back broken, it gets repaired automatically. Every AI call prints its token count and cost in the terminal.</li>
         <li><strong>Booking links:</strong> every pick has a Google Maps link, and neighborhoods have a Google Hotels link. For each place to eat, the server does one small web search in the background to find the real booking page (e.g. OpenTable, SevenRooms or the restaurant's own reservations page). A link is only used if the search actually returned it. If there's no booking page, the card shows the restaurant's own website (checked to load and mention the restaurant) and a Google search. In tests, London restaurants almost always got a real booking page. Istanbul restaurants often don't book online, so about half got a booking page or website.</li>
-        <li><strong>Analytics:</strong> PostHog records pageviews, clicks and session replays on this page and in the app. Text people type is hidden in replays.</li>
+        <li><strong>Analytics:</strong> PostHog records pageviews, clicks and session replays on this page and in the live app. Text people type is hidden in replays.</li>
+        <li><strong>Accounts (optional):</strong> people can sign in with an email and password. Signed in, they can save their places for each home city (with their taste reading), and every guide they make is saved as a trip. Picking a saved city they haven't changed skips the taste reading and goes straight to the trip. Guests can still use everything without saving.</li>
       </ol>
+
+      <h3>10. Hosting, data and security (PRD v3)</h3>
+      <p>Build 3 took the app from my laptop to a real address that anyone can open on their phone.</p>
+      <table>
+        <thead>
+          <tr><th>Choice</th><th>What I picked</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Hosting</td><td>Render, free web service</td><td>My app is a small Node server, which is what Render is for, so it needed almost no changes. Every push to GitHub deploys it automatically. The free plan falls asleep after 15 quiet minutes, so a free uptime monitor (UptimeRobot) visits it every 5 minutes to keep it awake for testers.</td></tr>
+          <tr><td>Sign-in</td><td>Optional, email + password (Supabase)</td><td>Optional so my pod and new testers can try it in seconds. Email + password instead of login links, because Supabase's free plan only sends a few emails an hour, which would break if a whole class signed up at once.</td></tr>
+          <tr><td>Database</td><td>Supabase (Postgres, free plan)</td><td>Two tables: saved places (one list per home city, with the taste reading) and trips (every guide). Row Level Security is on for both, so each person can only see and change their own rows, and visitors who aren't signed in get nothing.</td></tr>
+          <tr><td>Secrets</td><td>Kept on the server</td><td>My OpenRouter key lives only in Render's settings and never reaches the browser. The page only has keys that are meant to be public (Supabase's publishable key and PostHog's key).</td></tr>
+          <tr><td>Cost protection</td><td>Rate limits + spending cap</td><td>Each visitor gets 25 AI requests per 10 minutes, and the whole app 400 a day. The live app has its own OpenRouter key with a $5 cap and no auto top-up, so a surprise bill can't happen.</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Security audit:</strong> I tested that Account B can't read, change or delete Account A's data (12 out of 12 checks passed), that the AI routes start refusing after 25 calls, and that no secret keys are in the repo or the live page. An AI security review found 7 issues, and all of them are fixed. Full details are in <a href="https://github.com/building-with-ai-f26/ek2750-taste-passport/blob/main/SECURITY.md">SECURITY.md</a>.</p>
 
       <h3>9. Cost per user run</h3>
       <div class="callout">
@@ -278,24 +297,28 @@
     <!-- PROTOTYPE -->
     <section id="prototype">
       <h2>Prototype</h2>
-      <p><strong>Status:</strong> Build 2 local version. Runs on my laptop with Claude Haiku 5.5 and one web search through OpenRouter, with PostHog analytics.</p>
-      <p>The first slice of the core workflow works end to end: add 5+ favorite and 2+ disliked places with a note on each (typed or spoken), review and edit what the AI thinks I love or dislike about each one and who the crowd is, enter a destination and trip purpose, and get a guide with 1–2 neighborhoods, 5 places to eat and 3 places to drink. Every pick is tied to a specific favorite, has map and booking links, and is marked unverified.</p>
-      <p>The screenshots below are a real run with my friend Danielle's New York favorites for a trip to London.</p>
+      <p><strong>Status:</strong> Build 3, live at <a href="https://taste-passport-7jya.onrender.com">taste-passport-7jya.onrender.com</a>. Runs on Render with Claude Haiku 5.5 and one web search through OpenRouter, optional sign-in and saved data on Supabase, and PostHog analytics.</p>
+      <p>The core workflow works end to end: add 5+ favorite and 2+ disliked places with a note on each (typed or spoken), review and edit what the AI thinks I love or dislike about each one and who the crowd is, enter a destination and trip purpose, and get a guide with 1–2 neighborhoods, 5 places to eat and 3 places to drink. Every pick is tied to a specific favorite and has map and booking links. Signed in, my places and taste are saved for each home city and every guide is saved as a trip.</p>
+      <p>The screenshots below are a real run of the current version with Mara, one of my test personas (artsy, lives in Bushwick), and her New York favorites for a 4-day trip to London with a friend.</p>
       <figure>
-        <img src="images/flow-1-places.jpg" alt="Step one: home city set to New York, five favorite places (Via Carota, Carbone, BONDST, American Bar, Crosby Bar) and two disliked places (Dante, Wayla), each with a note and a speak button for voice input." />
-        <figcaption>1. Add favorite and disliked places from home, with a short note on each. Type it, or tap "speak" and say it.</figcaption>
+        <img src="images/flow-0-start.jpg" alt="Opening screen: same taste, new city, with a sign in button and a continue without signing in button, plus sign in at the top right." />
+        <figcaption>Start by signing in to save your places and guides, or just continue without an account.</figcaption>
       </figure>
       <figure>
-        <img src="images/flow-2-taste.jpg" alt="Step two: one card per place listing what the AI thinks she loves or dislikes about it, including a Crowd line, each reason editable or removable." />
-        <figcaption>2. Review what the AI thinks you love and dislike about each place, including who the crowd is, and edit anything that's off.</figcaption>
+        <img src="images/flow-1-places.jpg" alt="Step one: 'your places' next to a red 'where you call home' panel with New York as the home city, then five favorite places (Roberta's, Metrograph, Mood Ring, Dimes, Sunny's Bar) and two disliked places (Tao Downtown, Magnolia Bakery), each with a note and a speak button." />
+        <figcaption>1. Add favorite and disliked places from home, with a short note on each. Type it, or tap "speak" and say it. Signed in, you can save these for each home city.</figcaption>
       </figure>
       <figure>
-        <img src="images/flow-3-trip.jpg" alt="Step three: destination set to London and trip purpose set to a trip with friends and boyfriend." />
+        <img src="images/flow-2-taste.jpg" alt="Step two: one card per place listing what the AI thinks she loves or dislikes about it, each reason editable or removable." />
+        <figcaption>2. Review what the AI thinks you love and dislike about each place, and edit anything that's off.</figcaption>
+      </figure>
+      <figure>
+        <img src="images/flow-3-trip.jpg" alt="Step three: destination set to London and trip purpose set to a 4-day trip with a friend." />
         <figcaption>3. Enter where you're going and what the trip is for.</figcaption>
       </figure>
       <figure>
-        <img src="images/flow-4-guide.jpg" alt="The finished London guide: Soho and Marylebone to stay in, five places to eat and three places to drink, each with a reason tied to a New York favorite, map and booking links, and an unverified tag." />
-        <figcaption>4. Get a guide to London where every pick is tied to a New York favorite, with Map, Book a table (when a real booking page was found, e.g. SevenRooms for Bocca di Lupo) and Website links.</figcaption>
+        <img src="images/flow-4-guide.jpg" alt="The finished London guide: Dalston and Shoreditch to stay in, five places to eat and three places to drink, each with a reason tied to one of Mara's New York favorites, plus Map, Book a table and Website links." />
+        <figcaption>4. Get a guide to London where every pick is tied to a New York favorite, with Map, Book a table (when a real booking page was found, e.g. OpenTable for Ottolenghi Spitalfields) and Website links.</figcaption>
       </figure>
     </section>
 
@@ -305,15 +328,15 @@
       <div class="grid-2">
         <div class="stat-box">
           <div class="stat-label">Cumulative Build Spend</div>
-          <div class="stat-value">About $3.62 OpenRouter + Claude Pro</div>
+          <div class="stat-value">About $3.80 OpenRouter + Claude Pro (Render, Supabase and UptimeRobot are free)</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Est. Cost Per User Run</div>
           <div class="stat-value">About $0.05 (Haiku + 1 web search, plus booking link searches)</div>
         </div>
         <div class="stat-box">
-          <div class="stat-label">User Evidence (Analytics from Build 2)</div>
-          <div class="stat-value">PostHog live on this page and the app: pageviews, clicks and session replays verified</div>
+          <div class="stat-label">User Evidence (Analytics)</div>
+          <div class="stat-value">PostHog live on this page and the live app: pageviews, clicks and session replays verified on onrender.com</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Sponsor Call (Week 6)</div>
@@ -408,11 +431,49 @@
       </div>
 
       <div class="log-entry">
-        <h3>Build 3 · Build.exe: The Core Workflow (Due Nov 23)</h3>
+        <h3>Build 3 · Go Live & Security Audit (Due Nov 23)</h3>
         <ul>
-          <li><strong>What shipped:</strong> [End-to-end workflow working with real inputs + PostHog funnel events]</li>
-          <li><strong>What broke / changed in PRD:</strong> [Fill in]</li>
-          <li><strong>Cost & time this week:</strong> $[0.00] · [0] hours</li>
+          <li><strong>What shipped:</strong>
+            <ul>
+              <li>Taste Passport is live! Anyone can open <a href="https://taste-passport-7jya.onrender.com">taste-passport-7jya.onrender.com</a> on their phone and get a guide. It's on Render's free plan.</li>
+              <li>Sign-in (optional). I didn't want to keep typing my New York places every time, so now you can save your places for each home city. If you haven't changed anything, picking a saved city skips the taste reading and takes you straight to where you're going. Every guide I make is saved under "your trips."</li>
+              <li>A redesign of the first step so it looks more like the Pinterest page I had in mind from the start, plus a menu for saved places, trips and signing out.</li>
+              <li>A full security audit (<a href="https://github.com/building-with-ai-f26/ek2750-taste-passport/blob/main/SECURITY.md">SECURITY.md</a>), a $5 spending cap on the live app's OpenRouter key, and rate limits so nobody can run up my bill.</li>
+            </ul>
+          </li>
+          <li><strong>Things learned with AI:</strong>
+            <ul>
+              <li><em>Going live:</em> the live site only changes when I push to GitHub. Before that, changes only exist on my laptop, which is actually nice because I can try things without anyone seeing them.</li>
+              <li><em>Picking a host:</em> it depends on what you built. My app is a Node server, so Render was the easy choice. Vercel would have meant rebuilding how the app is set up.</li>
+              <li><em>Servers forget, databases remember:</em> anything you want to keep has to live in a real database, because free hosts restart the server all the time.</li>
+              <li><em>Row Level Security:</em> the database itself checks that every person only sees their own data, even if someone tries to get around the app. I tested it with two accounts and the second one couldn't see anything from the first.</li>
+              <li><em>Public vs. secret keys:</em> some keys are fine in the browser (Supabase's publishable key, PostHog's) and some never should be (my OpenRouter key).</li>
+              <li><em>Free plans have catches:</em> Render sleeps after 15 minutes, Supabase pauses after a week, and Supabase doesn't back anything up for you, so I exported my own backup.</li>
+            </ul>
+          </li>
+          <li><strong>What broke:</strong>
+            <ul>
+              <li><em>My first deploy failed</em> because I typed "nom install" instead of "npm install." The app was fine, Render just couldn't find a command called "nom."</li>
+              <li><em>The app fell asleep.</em> Render's free plan shuts the app down after 15 minutes with no visitors, and the next person waits almost a minute for it to wake up. That's bad for friends testing at random times, so I set up UptimeRobot (free) to visit the app every 5 minutes and keep it awake. It only loads the page, so it doesn't cost anything or mess up my PostHog data.</li>
+              <li><em>I locked myself out</em> for 10 minutes by running my own rate limit test. So at least I know it works.</li>
+              <li><em>Saved places were confusing at first.</em> The save button was at the top of the page, I couldn't go back to an empty form after loading a city, and it made me read my taste again even when nothing had changed. I tested it, gave feedback and fixed all of these.</li>
+              <li><em>Claude jumped ahead of me.</em> It started to commit without asking, and later wrote rules into AGENTS.md before I had picked them. I added three "rules from real mistakes" to AGENTS.md:
+                <ul>
+                  <li>Wait for my answer before acting on anything that's my choice, including commits.</li>
+                  <li>No blanket rules in the AI prompts, like "stay central" or "not touristy." In Build 2, rules like these overrode people's actual taste and sent everyone to the same areas. Every steer has to come from the person's own places and notes.</li>
+                  <li>Before any test that costs money (like running the personas), say what it will cost and wait for my OK. In Build 2, Claude re-ran the same paid tests just to look at the results again.</li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li><strong>What changed in the PRD:</strong> PRD v3 adds section 10 (hosting, data and security) and an accounts step in "How the app works." I changed the non-goals: personal accounts are in now (your places and guides are saved), so that non-goal became "shared group accounts." I also swapped "booking and reservations" for "importing likes from Beli or Google Maps." And I took the "unverified" tag off the guide cards.</li>
+          <li><strong>What's next:</strong>
+            <ul>
+              <li><em>More testers, now that it's live:</em> testing used to mean running it on my laptop. Now I can just send a link, so I sent it to my pod and to friends outside the class. I'm asking everyone to send me their score (how many of the picks they'd actually go to) so I can check it against my 7 out of 10 target. My pod will also test it on their phones in class on November 24.</li>
+              <li><em>Invite travel companions:</em> a link friends can open to add their own favorites and dislikes.</li>
+            </ul>
+          </li>
+          <li><strong>Cost & time this week:</strong> About $0.20 on OpenRouter, just my own live tests (all the security tests were set up to never reach the AI). Render, Supabase and UptimeRobot are free · 3 hours</li>
         </ul>
       </div>
 
