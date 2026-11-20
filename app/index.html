@@ -521,10 +521,39 @@
     for (let i = 0; i < MIN.love; i++) addPlaceRow("love");
     for (let i = 0; i < MIN.dislike; i++) addPlaceRow("dislike");
     document.querySelectorAll("[data-add]").forEach((b) => b.addEventListener("click", () => { addPlaceRow(b.dataset.add); updateCounts(); }));
-    $("places").addEventListener("input", updateCounts);
+    $("places").addEventListener("input", () => { updateCounts(); hideTasteIfOutdated(); });
     updateCounts();
 
     // ---------- Step 2: reading and editing taste ----------
+    // The taste on screen belongs to one exact set of places (home city, names, notes).
+    // tasteFor remembers which; if the places change, that taste is out of date.
+    let tasteFor = null;
+    const placesKey = () => JSON.stringify([$("homeCity").value.trim(), filledPlaces()]);
+
+    function showTaste(places) {
+      renderTaste(places);
+      $("taste").classList.remove("hidden");
+      $("trip").classList.remove("hidden");
+      document.querySelectorAll(".trait textarea").forEach(autosize); // size boxes once visible
+      tasteFor = placesKey();
+    }
+
+    function hideTaste() {
+      $("taste").classList.add("hidden");
+      $("trip").classList.add("hidden");
+      $("tasteCards").replaceChildren();
+      tasteFor = null;
+    }
+
+    // Changed a place, note or home city after the taste was read? Hide the old taste and trip,
+    // so a guide is never made from a taste that no longer matches.
+    function hideTasteIfOutdated() {
+      if (tasteFor && placesKey() !== tasteFor) {
+        hideTaste();
+        $("listMsg").textContent = "You changed your places, so press read my taste again.";
+      }
+    }
+
     $("tasteBtn").addEventListener("click", async () => {
       const btn = $("tasteBtn");
       $("tasteError").textContent = "";
@@ -532,10 +561,8 @@
       btn.textContent = "reading your taste…";
       try {
         const data = await post("/api/taste", { homeCity: $("homeCity").value.trim(), places: filledPlaces() });
-        renderTaste(data.places || []);
-        $("taste").classList.remove("hidden");
-        $("trip").classList.remove("hidden");
-        document.querySelectorAll(".trait textarea").forEach(autosize); // size boxes once visible
+        showTaste(data.places || []);
+        $("listMsg").textContent = "";
         $("taste").scrollIntoView({ behavior: "smooth" });
       } catch (err) {
         $("tasteError").textContent = err.message;
@@ -838,10 +865,24 @@
     // Fills step one with a saved list, ready to make a guide from it or to edit and save again.
     function useList(list) {
       $("listSelect").value = list.id;
+      const hasTaste = loadList(list);
+      $(hasTaste ? "taste" : "places").scrollIntoView({ behavior: "smooth" });
+    }
+
+    // Puts a saved list into step one. If it was saved with its taste reading, that shows too,
+    // with the trip step, so there's no need to read the same places again. Returns whether it did.
+    function loadList(list) {
       fillPlaces(list.home_city, list.places);
       updateSaveLabel();
-      listMsg(`Your ${list.home_city} places are in. Make a guide, or change anything and save your changes.`);
-      $("places").scrollIntoView({ behavior: "smooth" });
+      const hasTaste = list.places.length > 0 && list.places.every((p) => Array.isArray(p.traits) && p.traits.length);
+      if (hasTaste) {
+        showTaste(list.places.map((p) => ({ kind: p.kind === "dislike" ? "dislike" : "love", name: p.name, traits: p.traits })));
+        listMsg(`Your ${list.home_city} places and taste are in. Check your taste below, then plan your trip.`);
+      } else {
+        hideTaste();
+        listMsg(`Your ${list.home_city} places are in. Next: press read my taste.`);
+      }
+      return hasTaste;
     }
 
     function fillPlaces(homeCity, places) {
@@ -860,6 +901,15 @@
       const typed = $("homeCity").value.trim();
       const homeCity = findList(typed)?.home_city || typed; // reuse the saved spelling, so it updates that list
       const places = filledPlaces();
+      // If the taste on screen matches these exact places, save it too (including any edits to it).
+      const withTaste = tasteFor !== null && tasteFor === placesKey();
+      if (withTaste) {
+        const traits = new Map(currentTaste().map((t) => [`${t.kind}|${t.name.toLowerCase()}`, t.traits]));
+        places.forEach((p) => {
+          const t = traits.get(`${p.kind}|${p.name.toLowerCase()}`);
+          if (t) p.traits = t;
+        });
+      }
       if (!homeCity) return listMsg("Add your home city first: your places are saved under it.");
       if (!places.length) return listMsg("Add at least one place with a name and a note first.");
       const { error } = await db.from("place_lists").upsert(
@@ -867,7 +917,7 @@
         { onConflict: "user_id,home_city" }
       );
       if (error) return listMsg(friendly(error, "Couldn't save your places. Try again."));
-      listMsg(`Saved your ${homeCity} places.`);
+      listMsg(withTaste ? `Saved your ${homeCity} places and taste.` : `Saved your ${homeCity} places.`);
       posthog.capture("places_saved");
       loadLists();
     }
@@ -956,16 +1006,14 @@
         if (choice === "fresh") {
           // Empty form for a new home city; the saved lists stay as they are.
           fillPlaces("", []);
+          hideTaste();
           updateSaveLabel();
           $("listSelect").value = "";
           listMsg("Fresh start: add a home city and your places.");
           return $("homeCity").focus();
         }
         const list = savedLists.find((l) => l.id === choice);
-        if (!list) return;
-        fillPlaces(list.home_city, list.places);
-        updateSaveLabel();
-        listMsg(`Your ${list.home_city} places are in. Make a guide, or change anything and save your changes.`);
+        if (list) loadList(list);
       });
     }
   </script>
