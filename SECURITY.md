@@ -1,9 +1,8 @@
 # Security audit
 
-Taste Passport · Build 3 · Beginner lane · audit started November 20, 2026
+Taste Passport · Build 3 · Beginner lane · audited November 20, 2026
 
-> **Draft.** Everything below was checked on my laptop. The items marked **TODO (live)** get filled in
-> after the app is on Render.
+Live app: https://taste-passport-7jya.onrender.com (Render free web service)
 
 ## My kind of app
 
@@ -19,11 +18,11 @@ Hosting: Render free web service (Node, no packages).
 
 | # | Check | How | Result |
 |---|---|---|---|
-| 1 | Access control (AI app, no database): rate limit | Sent 30 requests in a row to `/api/split` | Requests 1–25 answered normally, 26–30 got `429 Too Many Requests` (on my laptop). **TODO (live):** repeat on the Render URL and take the screenshot. |
-| 2 | Secret keys stay on the server | Searched every file in the repo and the full git history for `sb_secret_`, `service_role`, `sk-or-`, `sk-ant-`, `sk-proj-`, `sk_live_` and my own key | Only placeholders found (`.env.example`, setup notes in `AGENTS.md`). `.env` is in `.gitignore` and was never committed. My real key appears nowhere. **TODO (live):** search the live page's code too. |
+| 1 | Access control (AI app, no database): rate limit | `bash tests/rate-limit-test.sh` sends 30 requests in a row to `/api/split` on the live site | **Live, Nov 20:** calls 1–25 allowed, calls 26–30 got `429 Too Many Requests` (screenshot submitted). The requests are empty, so the test never reaches the AI and costs $0. |
+| 2 | Secret keys stay on the server | Searched every file in the repo, the full git history, and the live page for `sb_secret_`, `service_role`, `sk-or-`, `sk-ant-`, `sk-proj-`, `sk_live_` and my own key | Only placeholders in the repo (`.env.example`, setup notes in `AGENTS.md`). `.env` is in `.gitignore` and was never committed. **Live page: nothing found.** The only key there is PostHog's public `phc_` key. Asking the live site for `/.env`, `/app/server.js` or `/package.json` returns 404. |
 | 3 | File storage private | — | Doesn't apply: the app stores no files. |
 | 4 | Production out of my agent's reach | Added an **Ask me first** list to `AGENTS.md` | The agent must ask before committing or pushing (a push to `main` changes the live site), deleting anything, touching keys or settings, or spending money. No database, so there's nothing to back up. |
-| 5 | Spending caps and rate limits | Rate limits in `server.js` | Per visitor: 25 requests per 10 minutes (a guide counts as 4). Whole app: 400 a day. **TODO:** hard monthly cap on the OpenRouter account, and a separate key with a small limit for the live app. |
+| 5 | Spending caps and rate limits | Rate limits in `server.js`; key limits on OpenRouter | Per visitor: 25 requests per 10 minutes (a guide counts as 4). Whole app: 400 a day. The live app uses its own OpenRouter key (`taste-passport-live`) with a **$5 limit**, kept only in Render's environment variables. My laptop key has a separate $10 limit. Auto top-up is off, so OpenRouter can't charge more than my prepaid balance. |
 | 6 | Dependencies | `npm audit` | **0 vulnerabilities.** The app uses no outside packages, only Node's built-in `http`, `fs`, `path`, `dns` and `net`. |
 | 7 | Agent security review | Asked Claude Code to read the server and page code and try to break the app | Found 6 issues, listed below. All fixed and tested. |
 
@@ -60,7 +59,7 @@ Checked and fine:
 | 3. Private addresses | Every website check now looks up where the address really points and refuses localhost, private networks, link-local and cloud metadata addresses, non-https and odd ports. Redirects are followed by hand (at most 3), checking each one | 13/13 address tests passed (e.g. `127.0.0.1`, `10.x`, `172.20.x`, `192.168.x`, `169.254.169.254`, `[::1]`, `[::ffff:127.0.0.1]`, `2130706433`) |
 | 4. Error details | OpenRouter's real error goes to the server log only; visitors see "The AI service had a problem. Please try again in a minute." | Called with a fake key: the browser got the plain message, the log got the real 401 |
 | 5. Raw code error | The guide route checks that a taste reading was sent first | Got "Read your taste first, then make the guide." |
-| 6. Headers | Page sent with `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin` | Checked in the browser; PostHog still loads |
+| 6. Headers | Page sent with `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin` | Checked in the browser (PostHog still loads) and on the live site |
 
 ## What is left
 
@@ -76,5 +75,5 @@ Checked and fine:
   that fetch is yes/no (does the page mention the restaurant), so the risk is low.
 - **Prompt injection:** a visitor can steer the AI with what they type, but only into their own guide.
   It's shown as plain text, so it can't run code or affect anyone else.
-- **TODO (live):** run the 30-call test on the Render URL (screenshot), search the live page for keys,
-  set the OpenRouter monthly cap, and use a separate key for the live app.
+- **The live key expires** in early February 2027. After that the app shows "The AI service had a
+  problem" until I make a new key and update it in Render.

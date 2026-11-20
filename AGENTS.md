@@ -30,6 +30,7 @@ tests/
   personas/*.json  Same personas as data, used by the script below.
   run-personas.js  Runs every persona through the app for London and Istanbul.
   results/         One Markdown file per run, with empty score columns to fill in.
+  rate-limit-test.sh  Security test: 30 calls in a row should hit 429 (free, no AI calls).
 .env.example       Template for .env (copy it, add your key).
 package.json       No packages. Tells Render to use Node 20+ and how to start the app.
 ```
@@ -54,7 +55,9 @@ Not used by the app: `Intent.md`, `Plan.md`, `journal/`, `SPONSOR_MEMO.md` (cour
 - Rate limits (in `server.js`): each visitor gets 25 `/api/` requests per 10 minutes, and the whole app
   400 a day; after that the server answers `429`. A guide request counts as 4 (it can make up to 4 AI
   calls). Counts reset when the server restarts. Security details: `SECURITY.md`.
-  Test for free: send 30 empty POSTs to `/api/split` (they fail input checks before any AI call).
+  Test for free: `bash tests/rate-limit-test.sh` (live site) or `bash tests/rate-limit-test.sh http://localhost:3000`.
+  It sends 30 empty POSTs to `/api/split`, which fail input checks before any AI call. Afterwards your
+  network is blocked from the AI features for 10 minutes.
   One persona-script run counts 27 (3 taste + 6 guides × 4), over the limit: see "Test with personas".
 - Voice input needs Chrome, Safari or Edge (the browser does speech-to-text). The speak button doesn't appear in Firefox.
 
@@ -73,12 +76,14 @@ Not used by the app: `Intent.md`, `Plan.md`, `journal/`, `SPONSOR_MEMO.md` (cour
 - Don't put example words in prompts that the AI could copy into someone's profile (e.g. "sceney").
 
 ## Shipping (live app on Render)
+Live app: https://taste-passport-7jya.onrender.com
 The live app runs on Render's free web service. Render deploys whatever is on `main` on GitHub,
 not what is on this laptop.
 
 First time only (Esra does these in the Render dashboard; the agent never touches the dashboard):
 1. dashboard.render.com → New → Web Service → connect `building-with-ai-f26/ek2750-taste-passport`.
-2. Language: Node. Branch: `main`. Build command: leave empty (there are no packages).
+2. Language: Node. Branch: `main`. Build command: `npm install` (not `yarn install`: Render's Node 26
+   has no yarn, and the build fails with status 127, "command not found").
    Start command: `node app/server.js`. Instance type: Free.
 3. Environment Variables: add `OPENROUTER_API_KEY` using a separate key made just for the live app,
    with a small credit limit. Never paste the local `.env` key.
