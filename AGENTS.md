@@ -22,6 +22,9 @@ app/
                                        falls back to its own website; only uses links the search returned
   index.html       The app's single page: places form (typed or spoken) → taste cards → trip → guide
                    with Map / Book a table / Website / Find a hotel links.
+                   Optional account (Supabase, email + password): save places per home city,
+                   guides saved as trips. Talks to Supabase directly with the public key;
+                   Row Level Security keeps each person's rows private. Guests use it as before.
 docs/
   index.html       Product Page on GitHub Pages: PRD, prototype screenshots, costs, build log.
   images/          Screenshots used on the Product Page.
@@ -31,6 +34,12 @@ tests/
   run-personas.js  Runs every persona through the app for London and Istanbul.
   results/         One Markdown file per run, with empty score columns to fill in.
   rate-limit-test.sh  Security test: 30 calls in a row should hit 429 (free, no AI calls).
+  account-isolation-test.js  Security test: Account B can't read/change Account A's data (free).
+                   Run: node --env-file=tests/.env.test tests/account-isolation-test.js
+                   (tests/.env.test holds the two throwaway test accounts; git ignores it)
+supabase/
+  schema.sql       The database: place_lists + trips, Row Level Security on both. Already run
+                   once in Supabase's SQL Editor; any change to the database goes here first.
 .env.example       Template for .env (copy it, add your key).
 package.json       No packages. Tells Render to use Node 20+ and how to start the app.
 ```
@@ -104,6 +113,8 @@ Every change after that:
 Stop and ask Esra before doing any of these:
 - Committing or pushing to GitHub (pushing to `main` changes the live site).
 - Deleting files, data or git history (`rm`, `git reset --hard`, force push).
+- Changing the database: new tables, policies or SQL of any kind. Write it in `supabase/schema.sql`,
+  show Esra, and Esra runs it in Supabase. Never delete users' rows or turn Row Level Security off.
 - Anything with keys, secrets or permissions: `.env`, Render environment variables, OpenRouter keys,
   repo settings.
 - Anything that costs money: running the persona script, repeated live AI calls, switching to a

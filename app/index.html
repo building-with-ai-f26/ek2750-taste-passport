@@ -148,6 +148,30 @@
     .pick-based { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
     .note { font-size: 13px; color: var(--muted); margin-top: 12px; }
 
+    /* Account: sign-in bar, saved places, saved trips */
+    .account {
+      border-radius: 16px; background: var(--maroon); color: var(--cream);
+      padding: 18px 20px; margin-bottom: 44px; display: grid; gap: 12px;
+    }
+    .account p { margin: 0; }
+    .account .btn { color: var(--cream); border-color: var(--cream); }
+    .account .btn:hover:not(:disabled) { background: var(--cream); color: var(--maroon); }
+    .account .link-btn { color: var(--cream); }
+    .account .status { color: #ecd5d0; }
+    .account input, .account select { background: var(--cream); border-color: transparent; }
+    .account-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .account-form input { flex: 1 1 200px; width: auto; }
+    .account-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .saved-lists { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    select {
+      font-family: inherit; font-size: 14px; color: var(--text); background: #fff;
+      border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; max-width: 100%;
+    }
+    .trip-card h3 { font-size: 24px; }
+    .trip-card .pick-hood { margin-bottom: 6px; }
+    .trip-card .account-row { margin-top: 12px; }
+    .link-btn { background: none; border: none; padding: 0; font: inherit; font-size: 13px; color: var(--cherry); font-weight: 500; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
     footer { padding: 32px 0; text-align: center; font-size: 12px; letter-spacing: 0.1em; }
 
     @media (max-width: 720px) {
@@ -163,6 +187,10 @@
           defaults: '2026-08-30',
       })
   </script>
+  <!-- Supabase: sign-in and saved places/trips. Pinned version; "integrity" makes the browser refuse a changed file. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"
+          integrity="sha384-uteMfOloLDGt042uDz+xHGF3ym63/WQ6rFq7murQRG8Ih7QrXGEGNtWd8688sb4O"
+          crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -182,6 +210,31 @@
       <p class="eyebrow">step one</p>
       <h2>your places</h2>
       <p class="intro">Add at least five places you love and two you don't, with a short note on each. Restaurants, bars, cafes, hotels, anything with a feeling.</p>
+
+      <!-- Account: hidden if the sign-in library can't load; the app still works without an account. -->
+      <div class="account hidden" id="account">
+        <div id="signedOut">
+          <p>Sign in to save your places for each home city and keep every guide you make. Or just carry on without an account.</p>
+          <form class="account-form" id="authForm">
+            <input id="authEmail" type="email" placeholder="email" autocomplete="email" required />
+            <input id="authPassword" type="password" placeholder="password (6+ characters)" autocomplete="current-password" minlength="6" required />
+            <button class="btn small" type="submit" id="signInBtn">sign in</button>
+            <button class="btn small" type="button" id="signUpBtn">create account</button>
+          </form>
+        </div>
+        <div class="hidden" id="signedIn">
+          <div class="account-row">
+            <span>Signed in as <strong id="userEmail"></strong></span>
+            <a class="link-btn" href="#trips">your trips</a>
+            <button class="link-btn" type="button" id="signOutBtn">sign out</button>
+          </div>
+          <div class="saved-lists">
+            <select id="listSelect" aria-label="Your saved places"></select>
+            <button class="btn small" type="button" id="saveListBtn">save these places</button>
+          </div>
+        </div>
+        <span class="status" id="accountMsg"></span>
+      </div>
 
       <div class="home-city">
         <label class="field" for="homeCity">home city</label>
@@ -247,7 +300,18 @@
       <p class="eyebrow">your guide</p>
       <h2 id="guideTitle">your guide</h2>
       <p class="intro">Every pick is tied to something you love. These places haven't been checked yet, so confirm they exist and are open before you go.</p>
+      <p class="status" id="tripSaveMsg"></p>
       <div id="guideBody"></div>
+    </div>
+  </section>
+
+  <!-- Saved trips (signed in only) -->
+  <section class="band blush hidden" id="trips">
+    <div class="wrap">
+      <p class="eyebrow">saved</p>
+      <h2>your trips</h2>
+      <p class="intro">Every guide you make while signed in is saved here.</p>
+      <div class="cards" id="tripCards"></div>
     </div>
   </section>
 
@@ -275,12 +339,14 @@
     // ---------- Step 1: entering places ----------
     const MIN = { love: 5, dislike: 2 };
 
-    function addPlaceRow(kind) {
+    function addPlaceRow(kind, nameValue = "", noteValue = "") {
       const row = el("div", "place-row");
       row.dataset.kind = kind;
       const name = el("input");
       name.placeholder = "Place name";
+      name.value = nameValue;
       const note = el("textarea");
+      note.value = noteValue;
       note.placeholder = kind === "love" ? "What do you love about it?" : "What don't you like about it?";
       row.append(name, note);
       const voice = voiceButton(name, note, kind);
@@ -468,10 +534,15 @@
       btn.disabled = true;
       btn.textContent = "making your guide…";
       try {
-        const guide = await post("/api/guide", { homeCity: $("homeCity").value.trim(), places: currentTaste(), destination, purpose });
-        renderGuide(guide, destination);
+        const homeCity = $("homeCity").value.trim();
+        const guide = await post("/api/guide", { homeCity, places: currentTaste(), destination, purpose });
+        const bookingsDone = renderGuide(guide, destination);
         $("guide").classList.remove("hidden");
         $("guide").scrollIntoView({ behavior: "smooth" });
+        // Signed in: save the trip now, then again once the booking links are in,
+        // so reopening it later shows them without paying for the searches again.
+        const tripId = await saveTrip(homeCity, destination, purpose, guide);
+        if (tripId) bookingsDone.then(() => db.from("trips").update({ guide }).eq("id", tripId)).then(() => loadTrips());
       } catch (err) {
         $("guideError").textContent = err.message;
       } finally {
@@ -491,59 +562,71 @@
 
     // Booking links for one pick: a map for everything, plus a hotel search for
     // neighborhoods and a table-booking search for places to eat.
-    function pickLinks(p, type, destination) {
+    // For a new guide, booking searches are added to `bookings`; a saved trip passes null
+    // and reuses the links it saved, so reopening it never pays for the searches again.
+    function pickLinks(p, type, destination, bookings) {
       const where = [p.name, p.neighborhood, destination].filter(Boolean).join(", ");
       const links = el("p", "pick-links");
       links.append(linkTo("Map", `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(where)}`));
       if (type === "stay") links.append(linkTo("Find a hotel", `https://www.google.com/travel/search?q=${encodeURIComponent(`hotels in ${p.name}, ${destination}`)}`));
       if (type === "eat") {
-        // Starts as a Google search; upgradeBooking swaps in the real booking page if one is found.
+        // Starts as a Google search; the real booking page replaces it if one is found.
         const book = linkTo("Find a table", `https://www.google.com/search?q=${encodeURIComponent(`${where} reservation`)}`);
         book.classList.add("book-link");
         links.append(book);
-        upgradeBooking(book, p, destination);
+        const note = el("span", "booking-note", "finding booking page…");
+        book.after(note);
+        if (bookings) bookings.push(upgradeBooking(book, note, p, destination));
+        else showBooking(book, note, p.links || {});
       }
       return links;
     }
 
     // Looks for the restaurant's real booking page in the background, so the guide shows right away.
-    async function upgradeBooking(link, p, destination) {
-      const note = el("span", "booking-note", "finding booking page…");
-      link.after(note);
+    async function upgradeBooking(link, note, p, destination) {
       try {
         const { url, website } = await post("/api/booking", { name: p.name, neighborhood: p.neighborhood, destination });
-        if (url) {
-          // Real booking page found: link straight to it.
-          link.href = url;
-          link.textContent = "Book a table";
-          note.textContent = `on ${new URL(url).hostname.replace(/^www\./, "")}`;
-          return;
-        }
-        if (website) {
-          // No booking page, but we have the restaurant's own site: add it next to the Google search.
-          note.replaceWith(linkTo("Website", website));
-          return;
-        }
-      } catch {}
-      note.remove(); // nothing found: keep the Google search link
+        p.links = { url, website }; // remembered in the guide, so a saved trip keeps them
+        showBooking(link, note, p.links);
+      } catch {
+        note.remove(); // nothing found: keep the Google search link
+      }
     }
 
-    function pickCard(p, showHood, type, destination) {
+    function showBooking(link, note, { url, website }) {
+      if (url) {
+        // Real booking page found: link straight to it.
+        link.href = url;
+        link.textContent = "Book a table";
+        note.textContent = `on ${new URL(url).hostname.replace(/^www\./, "")}`;
+      } else if (website) {
+        // No booking page, but we have the restaurant's own site: add it next to the Google search.
+        note.replaceWith(linkTo("Website", website));
+      } else {
+        note.remove(); // nothing found: keep the Google search link
+      }
+    }
+
+    function pickCard(p, showHood, type, destination, bookings) {
       const card = el("div", "card");
       card.append(el("h3", null, p.name));
       if (showHood && p.neighborhood) card.append(el("p", "pick-hood", p.neighborhood));
       else card.append(el("div", "pick-spacer"));
       card.append(el("p", "pick-reason", p.reason));
       if (p.basedOn) card.append(el("p", "pick-based", `Based on ${p.basedOn}`));
-      card.append(pickLinks(p, type, destination));
+      card.append(pickLinks(p, type, destination, bookings));
       card.append(el("span", "tag unverified", "unverified"));
       return card;
     }
 
-    function renderGuide(guide, destination) {
+    // Shows a guide. Returns a promise that finishes when all booking searches are done.
+    // With { saved: true } (a saved trip) it does no searches and uses the saved links.
+    function renderGuide(guide, destination, { saved = false } = {}) {
       $("guideTitle").textContent = destination.toLowerCase();
+      $("tripSaveMsg").textContent = "";
       const body = $("guideBody");
       body.replaceChildren();
+      const bookings = saved ? null : [];
 
       const groups = [
         ["where to stay", guide.neighborhoods, false, "stay"],
@@ -554,9 +637,162 @@
         const group = el("div", "guide-group");
         group.append(el("h3", null, title));
         const cards = el("div", "cards");
-        (picks || []).forEach((p) => cards.append(pickCard(p, showHood, type, destination)));
+        (picks || []).forEach((p) => cards.append(pickCard(p, showHood, type, destination, bookings)));
         group.append(cards);
         body.append(group);
+      });
+      return Promise.allSettled(bookings || []);
+    }
+
+    // ---------- Accounts (Supabase) ----------
+    // The project URL and publishable key are public by design, like the PostHog key. Row Level
+    // Security in the database (supabase/schema.sql) makes sure each person can only read and
+    // change their own rows. If the sign-in library can't load, the app works as before, without accounts.
+    const SUPABASE_URL = "https://lvppxkjxtwsvxwsyalpy.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_TuCUmANdCyLkqOEZzh-vKA_fBhiGxDP";
+    const db = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+    let user = null;
+    let savedLists = []; // this person's saved places, one list per home city
+
+    const accountMsg = (text) => { $("accountMsg").textContent = text || ""; };
+    const friendly = (error, fallback) => (error.message.includes("save up to") ? error.message : fallback);
+
+    async function showUser(next) {
+      const changed = (next?.id || null) !== (user?.id || null);
+      user = next;
+      $("signedOut").classList.toggle("hidden", !!user);
+      $("signedIn").classList.toggle("hidden", !user);
+      $("trips").classList.toggle("hidden", !user);
+      if (!user) { savedLists = []; $("tripCards").replaceChildren(); return; }
+      $("userEmail").textContent = user.email;
+      if (changed) { await loadLists(); await loadTrips(); }
+    }
+
+    async function authenticate(mode) {
+      const email = $("authEmail").value.trim();
+      const password = $("authPassword").value;
+      if (!email || password.length < 6) return accountMsg("Enter your email and a password of at least 6 characters.");
+      accountMsg(mode === "up" ? "Creating your account…" : "Signing in…");
+      const { data, error } = mode === "up"
+        ? await db.auth.signUp({ email, password })
+        : await db.auth.signInWithPassword({ email, password });
+      if (error) return accountMsg(error.message);
+      if (mode === "up" && !data.session) return accountMsg("Check your email to confirm your account, then sign in.");
+      $("authPassword").value = "";
+      accountMsg("");
+      posthog.capture(mode === "up" ? "account_created" : "signed_in");
+    }
+
+    // Saved places: pick a home city to fill in the form, or save what's in the form under its home city.
+    async function loadLists() {
+      const { data, error } = await db.from("place_lists").select("id, home_city, places").order("home_city");
+      if (error) return accountMsg("Couldn't load your saved places.");
+      savedLists = data;
+      const first = el("option", null, savedLists.length ? "use saved places…" : "no saved places yet");
+      first.value = "";
+      $("listSelect").replaceChildren(first, ...savedLists.map((l) => {
+        const option = el("option", null, `${l.home_city} (${l.places.length} places)`);
+        option.value = l.id;
+        return option;
+      }));
+    }
+
+    function fillPlaces(homeCity, places) {
+      $("homeCity").value = homeCity;
+      $("loveList").replaceChildren();
+      $("dislikeList").replaceChildren();
+      places.forEach((p) => addPlaceRow(p.kind === "dislike" ? "dislike" : "love", p.name, p.note));
+      for (const kind of ["love", "dislike"]) {
+        const have = places.filter((p) => (p.kind === "dislike" ? "dislike" : "love") === kind).length;
+        for (let i = have; i < MIN[kind]; i++) addPlaceRow(kind);
+      }
+      updateCounts();
+    }
+
+    async function saveList() {
+      const homeCity = $("homeCity").value.trim();
+      const places = filledPlaces();
+      if (!homeCity) return accountMsg("Add your home city first: your places are saved under it.");
+      if (!places.length) return accountMsg("Add at least one place with a name and a note first.");
+      const { error } = await db.from("place_lists").upsert(
+        { user_id: user.id, home_city: homeCity, places, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,home_city" }
+      );
+      if (error) return accountMsg(friendly(error, "Couldn't save your places. Try again."));
+      accountMsg(`Saved your ${homeCity} places.`);
+      posthog.capture("places_saved");
+      loadLists();
+    }
+
+    // Saved trips: every guide made while signed in. Returns the new trip's id (or null).
+    async function saveTrip(homeCity, destination, purpose, guide) {
+      if (!user) {
+        $("tripSaveMsg").textContent = db ? "Sign in at the top of step one to save your guides." : "";
+        return null;
+      }
+      const { data, error } = await db.from("trips")
+        .insert({ user_id: user.id, home_city: homeCity || null, destination, purpose, guide })
+        .select("id").single();
+      if (error) { $("tripSaveMsg").textContent = friendly(error, "Couldn't save this trip."); return null; }
+      $("tripSaveMsg").textContent = "Saved to your trips.";
+      posthog.capture("trip_saved");
+      loadTrips();
+      return data.id;
+    }
+
+    async function loadTrips() {
+      const wrap = $("tripCards");
+      const { data, error } = await db.from("trips")
+        .select("id, home_city, destination, purpose, guide, created_at")
+        .order("created_at", { ascending: false });
+      wrap.replaceChildren();
+      if (error) return wrap.append(el("p", "status", "Couldn't load your trips."));
+      if (!data.length) return wrap.append(el("p", "status", "No trips yet. Make a guide and it'll be saved here."));
+      data.forEach((t) => {
+        const card = el("div", "card trip-card");
+        card.append(el("h3", null, t.destination));
+        card.append(el("p", "pick-hood", new Date(t.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })));
+        if (t.purpose) card.append(el("p", "pick-reason", t.purpose));
+        if (t.home_city) card.append(el("p", "pick-based", `Based on your ${t.home_city} places`));
+        const row = el("div", "account-row");
+        const open = el("button", "btn small", "open");
+        open.type = "button";
+        open.addEventListener("click", () => openTrip(t));
+        const remove = el("button", "link-btn", "delete");
+        remove.type = "button";
+        remove.addEventListener("click", async () => {
+          if (!confirm(`Delete your ${t.destination} trip? This can't be undone.`)) return;
+          const { error: deleteError } = await db.from("trips").delete().eq("id", t.id);
+          if (!deleteError) loadTrips();
+        });
+        row.append(open, remove);
+        card.append(row);
+        wrap.append(card);
+      });
+    }
+
+    function openTrip(t) {
+      renderGuide(t.guide, t.destination, { saved: true });
+      $("tripSaveMsg").textContent = `Saved trip${t.purpose ? `: ${t.purpose}` : ""}.`;
+      $("guide").classList.remove("hidden");
+      $("guide").scrollIntoView({ behavior: "smooth" });
+    }
+
+    if (db) {
+      $("account").classList.remove("hidden");
+      // Fires on page load (if already signed in), sign-in and sign-out. Supabase asks that other
+      // Supabase calls not run inside this callback, so the work is started just after it.
+      db.auth.onAuthStateChange((_event, session) => setTimeout(() => showUser(session?.user || null), 0));
+      $("authForm").addEventListener("submit", (e) => { e.preventDefault(); authenticate("in"); });
+      $("signUpBtn").addEventListener("click", () => authenticate("up"));
+      $("signOutBtn").addEventListener("click", async () => { await db.auth.signOut(); accountMsg("Signed out."); });
+      $("saveListBtn").addEventListener("click", saveList);
+      $("listSelect").addEventListener("change", () => {
+        const list = savedLists.find((l) => l.id === $("listSelect").value);
+        if (!list) return;
+        fillPlaces(list.home_city, list.places);
+        accountMsg(`Loaded your ${list.home_city} places. Edit anything, then read your taste.`);
+        $("listSelect").value = "";
       });
     }
   </script>
